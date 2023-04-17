@@ -1,38 +1,41 @@
-# Rust project template
+# Sleppa
 
-This Rust project template provides a pre-configured (and probably a bit opinionated) project with all necessary tools to enforce good coding practices.
+This project aims to provide a semantic-release for Rust written project in a Rust written way.
+A configuration file is mandatory and is named `sleppa.toml`.
 
-## How to use this project template
+Original [semantic-release](https://github.com/semantic-release/semantic-release/discussions) is a very powerful tool to operate semantic release. It automates the whole package release workflow including: determining the next version number, generating the release notes, and publishing the package.
 
-In order to use this Rust project template, here are the steps to follow:
+As we are using squash-and-merge strategy to keep a clean and lean history, we have to develop a way to read the message of squashed commits.
+Our strategy is as follows :
 
-- **Create your repo**: start by [creating a new repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) from this template for your project, giving the latter a new name.
+- Creating a new branch to operate change. The branch name will be the message of the squashed commits.
+- Do some commits on this branch (named inner commit) with valid conventionnal commit message.
+- Create a pull request (PR) with a valid name like: `Issue to solve (#3)` where the number `3` is the number of the PR.
+- Squash-and-merge the PR with the valid name.
 
-- **Set your project's title**: replace the title of this REAMDE.md file, with the name of your new project.
+## How it works
 
-- **Set your Git username and email**: so that to put a name on a contribution and be able to contact the author, please [set your Git username and email](https://docs.github.com/en/get-started/getting-started-with-git/setting-your-username-in-git).
+The following table describes each `<type>` of commit and how the latter impacts (i.e. increments) the `MAJOR`, `MINOR` and/or `PATCH` digits of a [semantic version](https://semver.org).
 
-- ... more to come
+| Type      | Category        | Description                                                                                      | Versioning | Example                                                                        |
+| --------- | --------------- | ------------------------------------------------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------ |
+| **break** | _Development_   | Breaking changes that causes a new major version of a component to be launched                   | `MAJOR`    | `break(service): new feature impacting the data model`                         |
+| **build** | _Development_   | Changes related to the build system (involving configurations or tools) and package dependencies | `MINOR`    | `build(cargo): bump tokio-tower to version 1.5.2`                              |
+| **ci**    | _Development_   | Changes impacting the CI/CD pipeline (e.g. GitHub Actions scripts, tools, ...)                   | `MINOR`    | `docs(changelog): update CHANGELOG to new version 0.1.1`                       |
+| **docs**  | _Documentation_ | Changes impacting the project documentation                                                      | `MINOR`    | `docs(changelog): update CHANGELOG to new version 0.1.1`                       |
+| **feat**  | _Production_    | Changes related to new backward-compatible features or functionalities                           | `MINOR`    | `feat(largo): implement Quic/RPC API server`                                   |
+| **fix**   | _Production_    | Changes related to backward-compatible bug fixes                                                 | `PATCH`    | `fix(service): correctly resolve shorthand property declarations`              |
+| **perf**  | _Production_    | Changes related to backward-compatible performance improvements                                  | `PATCH`    | `perf(net): use of non-blocking data structures for faster packets processing` |
+| **refac** | _Development_   | Changes that restructure/rewrite the code base (not a new feature or a bug fix)                  | `PATCH`    | `refac(largo): adopt a graph data model for the storage engine`                |
+| **sec**   | _Production_    | Changes related to backward-compatible security improvements                                     | `PATCH`    | `sec(net): use TLS 1.3`                                                        |
+| **style** | _Development_   | Changes that do not affect the meaning of the source code (e.g. indentation, whitespaces, ...)   | `PATCH`    | `style(largo): bump indentation to 4 blank characters`                         |
+| **test**  | _Development_   | Changes related to tests (i.e. refactoring or adding tests)                                      | `PATCH`    | `test(service): implement property-based tests on financial algorithms`        |
 
-## How can I contribute to this project
+These types and versionning are the default implementation of `Sleppa`.
 
-Open source software is neither contagious nor a [cancer](https://www.techrepublic.com/article/microsoft-no-we-dont-hate-open-source-software-and-we-can-prove-it/), as some narrow-minded people have said in the past!
+### View of a squashed PR with inner commits
 
-We therefore encourage you to jump on the free software bandwagon and help us, through your contributions and your passion (which we hope will be as contagious as possible), to build this audacious project with our community.
-
-"How can I contribute to this project", you may ask? First, we invite you to read carefully our [Contributor's Bible](./CONTRIBUTOR_BIBLE.md).
-
-The second question you are probably asking yourself is "how can I be of help to this project"? Here are a few suggestions that come to mind:
-
-- Sharing knowledge and know-how is crucial in such community-driven project. So why not helping us writing the documentation? This will give you a good understanding of the concepts and technology behind Sofair.
-
-- If you're a passionate software engineer, why not contributing through coding? Some challenging tasks in cryptography, graph-based database, blockchain, networking, maths and more can challenge your neurons. Be sure that the core projec's team will always take care of onboarding newcommers with care, so that they feel comfortable contributing with us.
-
-- And more...
-
-The next concrete step is to take the plunge by picking one the outstanding tasks on the project's management board. For doing so, please bump to the [Getting started](./CONTRIBUTOR_BIBLE.md) paragraph of our `Contributor's Bible`.
-
-If none of the above resonates with you, do not hesitate to send us an email at `community@sofair.io`. You are sure to meet an open tribe eager to accept new ideas or contributions. Don't be shy!
+![Alt text](https://user-images.githubusercontent.com/15166875/229083489-82a73e59-7f64-468a-88f7-8714d0630e37.png "squashed commit")
 
 ## Licenses and copyright
 

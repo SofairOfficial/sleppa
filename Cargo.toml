@@ -1,18 +1,13 @@
 [workspace]
-
-members = [
-  "crates/greeter_cli",
-  "crates/greeter_service",
-  "crates/greeter_mock"
-]
+members = []
 
 # Global package attributes
 [workspace.package]
 authors = ["Sofair Contributors <info@sofair.io>"]
 license = "MIT or Apache-2.0"
-documentation = "https://documents.sofair.io/[new_project_name]"
-homepage = "https://projects.sofair.io/[new_project_name]"
-repository = "https://github.com/SofairOfficial/[new_project_name]"
+documentation = "https://github.com/SofairOfficial/sleppa"
+homepage = "https://github.com/SofairOfficial/sleppa"
+repository = "https://github.com/SofairOfficial/sleppa"
 edition = "2021"
 rust-version = "1.67"
 
@@ -25,4 +20,3 @@ incremental = false
 lto = true
 codegen-units = 1
 incremental = false
-
