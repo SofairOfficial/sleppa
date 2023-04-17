@@ -1,0 +1,19 @@
+[package]
+name = "greeter_cli"
+description = "Sample command-line interface for invoking the greeter service"
+version = "0.1.0"
+
+# Generic package attributes (inherited from workspace)
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "greeter"
+path = "src/main.rs"
+
+[dependencies]
+greeter_service = { version = "0.1.0", path = "../greeter_service" }

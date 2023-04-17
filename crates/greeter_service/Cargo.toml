@@ -1,0 +1,14 @@
+[package]
+name = "greeter_service"
+description = "Sample greeter service library"
+version = "0.1.0"
+
+# Generic package attributes (inherited from workspace)
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]

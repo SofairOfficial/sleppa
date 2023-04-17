@@ -1,0 +1,46 @@
+name: Task
+description: Submit new Task
+labels: ["task"]
+body:
+  - type: textarea
+    id: task-aim
+    attributes:
+      label: Aim
+      description: Describe the aim and motivation for the creation of this task.
+    validations:
+      required: true
+  - type: textarea
+    id: task-assumption
+    attributes:
+      label: Assumptions
+      description: Provide a list of assumptions that must be considered for this task.
+    validations:
+      required: true
+  - type: textarea
+    id: task-acceptancecriteria
+    attributes:
+      label: Acceptance criteria
+      description: Describe a list of acceptance criteria for this task.
+    validations:
+      required: true
+  - type: textarea
+    id: task-risks
+    attributes:
+      label: Risks
+      description: Provide a list of risks that should be considered for this task.
+    validations:
+      required: true
+  - type: textarea
+    id: task-dependencies
+    attributes:
+      label: Dependencies
+      description: Indicate any dependencies that could block the execution of this task
+    validations:
+      required: false
+  - type: textarea
+    id: task-references
+    attributes:
+      label: References
+      description: Provide a list of references that should be used to assure the correct execution of this task.
+    validations:
+      required: false

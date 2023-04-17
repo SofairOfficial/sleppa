@@ -1,0 +1,19 @@
+[package]
+name = "greeter_mock"
+description = "Sample mocking for greeter service"
+version = "0.1.0"
+
+# Generic package attributes (inherited from workspace)
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "greetermock"
+path = "src/main.rs"
+
+[dependencies]
+mockall = { version = "0.11.3" }

@@ -1,0 +1,33 @@
+name: Feature request
+description: Submit new feature request 
+title: "[FEAT]: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: fr-context
+    attributes:
+      label: Feature request context & motivation
+      description: Describe the context and motivation for the creation of this feature request.
+    validations:
+      required: true
+  - type: textarea
+    id: fr-description
+    attributes:
+      label: Feature request description
+      description: Describe in detail your feature request.
+    validations:
+      required: true
+  - type: textarea
+    id: fr-alternatives
+    attributes:
+      label: Feature request alternatives
+      description: Describe the alternatives you considered.
+    validations:
+      required: false
+  - type: textarea
+    id: fr-additionalinfo
+    attributes:
+      label: Additional information
+      description: Provide additional information you considered relevant for this feature request.
+    validations:
+      required: false
