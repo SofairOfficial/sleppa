@@ -1,0 +1,31 @@
+[package]
+name = "sleppa_config_parser"
+version = "0.1.0"
+
+keywords = ["configuration", "parser", "toml"]
+
+categories = ["parser", "toml"]
+
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+# External dependencies
+serde = { version = "1.0.160", features = ["derive"] }
+toml = "^0.7.3"
+regex = "^1.7.3"
+tempfile = "3"
+
+# Errors and logs processing
+thiserror = { workspace = true }
+
+[lib]
+name = "sleppa_config_parser"
+crate-type = ["lib"]
+path = "src/lib.rs"

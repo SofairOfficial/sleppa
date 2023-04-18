@@ -11,6 +11,10 @@ repository = "https://github.com/SofairOfficial/sleppa"
 edition = "2021"
 rust-version = "1.67"
 
+# Global dependencies
+[workspace.dependencies]
+thiserror = { version = "1.0.40" }
+
 [profile.release]
 lto = true
 codegen-units = 1
