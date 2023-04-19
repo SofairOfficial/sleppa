@@ -4,7 +4,6 @@
 //! This configuration file should contain a `[release_rule]` section with the 3 release types: `major`, `minor` and `patch`.
 //! These release types are mandatory and are case sensitive. Here an exemple of such a file :
 //!
-//! ```
 //! [release_rules]
 //! major = { keywords = ["default"] }
 //! minor = { keywords = [
@@ -16,7 +15,6 @@
 //!    "fix",
 //!    "perf",
 //! ], commit_format = { parser = "peg", grammar = '^(?P<type>fix|perf){1}:\s.*[a-z0-9]$' } }
-//!```
 //!
 //!For each release type, user can define the behavior of the semantic release with a custom parser.
 //!
@@ -40,7 +38,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use toml;
 
 mod error;
 
@@ -74,6 +71,12 @@ impl Config {
     }
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// The ReleaseRule is defined by the keywords inside the `sleppa.toml`
 /// and the `commit_format` for a custom type.
 #[derive(Debug, Serialize, Deserialize)]
@@ -87,7 +90,7 @@ impl ReleaseRule {
     /// are present, then loads the release rules associated and provide them to `Config`
     fn verify_release_rule(&mut self) {
         if &self.keywords[0] == "default" {
-            self.commit_format = Some(ReleaseRuleFormat::default());
+            self.commit_format = Some(ReleaseRuleFormat::sofair());
         } else if &self.keywords[0] == "angular" {
             self.commit_format = Some(ReleaseRuleFormat::angular());
         } else {
@@ -107,7 +110,7 @@ pub struct ReleaseRuleFormat {
 impl ReleaseRuleFormat {
     /// Implement the Sofair parser (the default one) with the associated keywords
     /// This grammar is used for Major, Minor and Patch
-    pub fn default() -> Self {
+    pub fn sofair() -> Self {
         ReleaseRuleFormat {
             parser: Parser::Regex,
             grammar: r"^(?P<type>break|build|ci|docs|feat|fix|perf|refac|sec|style|test){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$".to_string(),
@@ -122,12 +125,12 @@ impl ReleaseRuleFormat {
 
     // Get the grammar of a ReleaseRuleFormat
     pub fn get_grammar(&self) -> String {
-        return self.grammar.to_owned();
+        self.grammar.to_owned()
     }
 
     // Get the parser of a ReleaseRuleFormat
     pub fn get_parser(&self) -> Parser {
-        return self.parser.to_owned();
+        self.parser.to_owned()
     }
 }
 
@@ -148,20 +151,17 @@ pub fn try_parse_sleppatoml(path: &Path) -> ConfparserResult<Config> {
         return Err(ConfparserError::IncorrectReleaseAction("PATCH is missing".to_string()));
     }
 
-    config
-        .release_rules
-        .get_mut(&ReleaseAction::Major)
-        .map(|conf| conf.verify_release_rule());
-    config
-        .release_rules
-        .get_mut(&ReleaseAction::Minor)
-        .map(|conf| conf.verify_release_rule());
-    config
-        .release_rules
-        .get_mut(&ReleaseAction::Patch)
-        .map(|conf| conf.verify_release_rule());
+    if let Some(conf) = config.release_rules.get_mut(&ReleaseAction::Major) {
+        conf.verify_release_rule()
+    }
+    if let Some(conf) = config.release_rules.get_mut(&ReleaseAction::Minor) {
+        conf.verify_release_rule()
+    }
+    if let Some(conf) = config.release_rules.get_mut(&ReleaseAction::Patch) {
+        conf.verify_release_rule()
+    }
 
-    return Ok(config);
+    Ok(config)
 }
 
 #[cfg(test)]
