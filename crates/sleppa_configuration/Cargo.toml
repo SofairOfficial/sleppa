@@ -1,8 +1,16 @@
 [package]
 name = "sleppa_config_parser"
+description = "Toml configuration fiel loader for Sleppa"
 version = "0.1.0"
 
-keywords = ["configuration", "parser", "toml"]
+keywords = [
+    "Sleppa",
+    "release-automation",
+    "semantic-release",
+    "configuration",
+    "parser",
+    "toml",
+]
 
 categories = ["parser", "toml"]
 

@@ -1,9 +1,0 @@
-# This configuration file defines the release rules according to release types.
-# Each release type could be defined independantly.
-# The keyword `default` will load the release rules of the Sofair project
-# The keyword `angular` will load the release rules of the Angular project
-
-[release_rules]
-minor = { keywords = ["default"] }
-major = { keywords = ["default"] }
-patch = { keywords = ["default"] }
