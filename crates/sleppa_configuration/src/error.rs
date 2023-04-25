@@ -1,4 +1,4 @@
-/// Error enumeration for the configuration parser module.
+/// Enumerates all errors that can occur when processing a configuration file.
 ///
 /// This list is a central structure aiming to define errors that can occur
 /// while reading and parsing the configuration file.
@@ -8,16 +8,21 @@ pub enum ConfigurationError {
     #[error(transparent)]
     InputOutputError(#[from] std::io::Error),
 
-    // Error while reading the configuration toml file
+    // Chained Toml file processing errors
     #[error(transparent)]
     ErrorReadingToml(#[from] toml::de::Error),
 
-    // Error in the regex component of the library
+    // Chained errors occurring when processing regular expressions
     #[error(transparent)]
     RegexError(#[from] regex::Error),
 
+    // Wrong or no ReleaseActino found
     #[error("The release action is 'major', 'minor' or 'patch'. Found : {0}")]
     IncorrectReleaseAction(String),
+
+    // No match found when analyzing commit message with the grammar
+    #[error("No match found.")]
+    ErrorNoMatch(),
 }
 
 /// Definition of the configuration parser result

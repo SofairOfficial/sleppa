@@ -1,6 +1,6 @@
 [package]
-name = "sleppa_config_parser"
-description = "Toml configuration fiel loader for Sleppa"
+name = "sleppa_configuration"
+description = "Toml configuration file loader for Sleppa"
 version = "0.1.0"
 
 keywords = [
@@ -12,7 +12,7 @@ keywords = [
     "toml",
 ]
 
-categories = ["parser", "toml"]
+categories = ["Configuration"]
 
 edition.workspace = true
 authors.workspace = true
@@ -34,6 +34,6 @@ tempfile = "3"
 thiserror = { workspace = true }
 
 [lib]
-name = "sleppa_config_parser"
+name = "sleppa_configuration"
 crate-type = ["lib"]
 path = "src/lib.rs"

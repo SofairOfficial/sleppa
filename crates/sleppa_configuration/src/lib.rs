@@ -1,10 +1,8 @@
 //! # Configuration file parser
 //!
-//! Sleppa configuration parser reads the `sleppa.toml` configuration file and deserializes it.
-//!
 //! This parser reads the `sleppa.toml` configuration file and converts it to Rust structure [Configuration].
-//! This configuration file should contain a `[release_rule]` section with the 3 release types: `major`, `minor` and `patch`.
-//! These release types are mandatory and are case sensitive. Here an exemple of such a file :
+//! This configuration file must contain a `[release_rule]` section with three types of release actions, namely `major`, `minor` and `patch`.
+//! These three release action types are mandatory and must be written in lower case, as shown in the example below :
 //!
 //!```toml
 //! [release_rules]
@@ -13,18 +11,16 @@
 //! patch = { format = "regex", grammar = '^(?P<type>fix|refac|test){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }
 //!```
 //!
-//! For each release type, user must define a `format` to read the associated `grammar`.
-//!
-//! The supported format are defined by an enum [ReleaseRuleFormat] :
-//! - Regex: declared by `regex`
-//! - Peg: declared by `peg`
+//! For each release rule, user must define a format and a grammar. The format defines the idiom used for describing
+//! the grammar that will be used for analysing a commit message. Two formats are now supported,
+//! namely `regex` (for [regular expression](https://en.wikipedia.org/wiki/Regular_expression))
+//! and `peg` (for [parsing expression grammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar)).
 //!
 //! The function [try_parse] returns a [Configuration] :
 //! - `Hashmap<ReleaseAction, ReleaseRuleDefinition { ReleaseRuleFormat, String }>`
 //!
-//! The trait [ReleaseRuleHandler] handles the release rule definition and verifies if a message
-//! matches a [ReleaseAction].
-//!
+//! The trait [ReleaseRuleHandler] handles the release rule definition and verifies if a commit message
+//! matches a grammar.
 
 mod error;
 
@@ -39,11 +35,11 @@ use std::path::Path;
 #[derive(PartialEq, Debug, Serialize, Deserialize, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum ReleaseAction {
-    /// Major release incrementing the first number : `1.0.1` -> `2.0.0`
+    /// Major release implying the left digit of a semantic version to be incremented (e.g. from `1.0.1` -> `2.0.0`)
     Major,
-    /// Minor release incrementing the second number : `1.0.1` -> `1.1.0`
+    /// Minor release implying the middle digit of a semantic version to be incremented (e.g. from `1.0.1` -> `1.1.0`)
     Minor,
-    /// Patch release incrementing the third number : `1.0.1` -> `1.0.2`
+    /// Patch release implying the right digit of a semantic version to be incremented (e.g. from `1.0.1` -> `1.0.2`)
     Patch,
 }
 
@@ -51,15 +47,17 @@ pub enum ReleaseAction {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ReleaseRuleFormat {
-    /// Format using Regex syntax
+    /// Grammar of the release rule is defined as a regular expression
     Regex,
-    /// Format using Peg syntax
+    /// Grammar of the release rule is defined using parsing expression grammar (PEG)
     Peg,
 }
 
-/// The new type associated with the `release_rules` section in the `sleppa.toml`.
+/// Type alias used for typing release rule
 pub type ReleaseRules = HashMap<ReleaseAction, ReleaseRuleDefinition>;
 
+/// Configuration data structure
+///
 /// This structure will be used to deserialize the toml into this Rust usable type.
 ///
 /// The `release_rules` hashmap contains 3 keys : `major`, `minor` and `patch`.
@@ -72,9 +70,7 @@ pub struct Configuration {
 /// Implementation of the `new` method : `Configuration::new()`
 impl Configuration {
     pub fn new() -> Self {
-        Configuration {
-            release_rules: HashMap::new(),
-        }
+        Configuration::default()
     }
 }
 
@@ -83,43 +79,44 @@ impl Configuration {
 pub struct ReleaseRuleDefinition {
     /// The format is `Regex` or `Peg`
     pub format: ReleaseRuleFormat,
+    /// Expression used to analyze the commit message
     pub grammar: String,
 }
 
-/// Trait to analyze a `message` and if it matches a [ReleaseRules].
 pub trait ReleaseRuleHandler {
+    /// Verifies if a commit message matches the grammar.
+    ///
     /// Reads a message, compares it to a `grammar` in a `format` (Regex or Peg)
     /// and returns a boolean. True if there is a match , false otherwise.
-    fn handle(&self, message: &str) -> ConfigurationResult<bool>;
+    fn handle(&self, message: &str) -> ConfigurationResult<()>;
 }
 
-/// Implementation of the trait [ReleaseRuleHandler] for [ReleaseRuleDefinition].
 impl ReleaseRuleHandler for ReleaseRuleDefinition {
-    fn handle(&self, message: &str) -> ConfigurationResult<bool> {
+    fn handle(&self, message: &str) -> ConfigurationResult<()> {
         match &self.format {
             ReleaseRuleFormat::Regex => {
-                let re = match Regex::new(self.grammar.as_str()) {
-                    Ok(re) => re,
+                let regex = match Regex::new(self.grammar.as_str()) {
+                    Ok(regex) => regex,
                     Err(err) => {
                         return Err(ConfigurationError::RegexError(err));
                     }
                 };
-                let captured = match re.captures(message) {
-                    Some(_cap) => true,
-                    None => false,
-                };
-                Ok(captured)
+                match regex.captures(message) {
+                    Some(_cap) => Ok(()),
+                    None => Err(ConfigurationError::ErrorNoMatch()),
+                }
             }
             ReleaseRuleFormat::Peg => {
-                todo!()
+                unimplemented!()
             }
         }
     }
 }
 
+/// Parses a configuration file and create a [Configuration]
+///
 /// Tries parsing the `sleppa.toml` configuration file and returns a [Configuration] or
 /// a [ConfigurationError].
-///
 /// The `path` is the path to the configuration file `sleppa.toml`.
 /// The parsing returns a [ConfigurationError] if a [ReleaseAction] is missing or if the `format` is not recognized.
 pub fn try_parse(path: &Path) -> ConfigurationResult<Configuration> {
