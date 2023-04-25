@@ -1,3 +1,5 @@
+# Sample Sleppa configuration file
+#
 # This configuration file defines the release rules according to release action types.
 # Each release type could be defined independantly.
 # This file must contain the 3 types : `major`, `minor` and `patch` and th rules associated.

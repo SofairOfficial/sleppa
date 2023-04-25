@@ -1,4 +1,4 @@
-//! # Configuration file parser
+//! Sleppa configuration management package
 //!
 //! This parser reads the configuration file and converts it to Rust structure [Configuration].
 //! This configuration file must contain a `[release_rule]` section with three types of release actions, namely `major`, `minor` and `patch`.
@@ -17,9 +17,9 @@
 //! and `peg` (for [parsing expression grammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar)).
 //!
 //! The function [try_parse] returns a [Configuration] :
-//! - `Hashmap<ReleaseAction, ReleaseRuleDefinition { ReleaseRuleFormat, String }>`
+//! - `Hashmap<ReleaseAction, ReleaseRule { ReleaseRuleFormat, String }>`
 //!
-//! The trait [ReleaseRuleHandler] handles the release rule definition and verifies if a commit message
+//! The trait [ReleaseRuleHandler] handles the release rule and verifies if a commit message
 //! matches a grammar.
 
 mod error;
@@ -54,14 +54,14 @@ pub enum ReleaseRuleFormat {
 }
 
 /// Type alias used for typing release rule
-pub type ReleaseRules = HashMap<ReleaseAction, ReleaseRuleDefinition>;
+pub type ReleaseRules = HashMap<ReleaseAction, ReleaseRule>;
 
 /// Configuration data structure
 ///
 /// This structure will be used to deserialize the toml into this Rust usable type.
 ///
 /// The `release_rules` hashmap contains 3 keys : `major`, `minor` and `patch`.
-/// For every key a [ReleaseRuleDefinition] is associated.
+/// For every key a [ReleaseRule] is associated.
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Configuration {
     pub release_rules: ReleaseRules,
@@ -76,7 +76,7 @@ impl Configuration {
 
 /// Release rule ressource
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ReleaseRuleDefinition {
+pub struct ReleaseRule {
     /// The format is `Regex` or `Peg`
     pub format: ReleaseRuleFormat,
     /// Expression used to analyze the commit message
@@ -91,7 +91,7 @@ pub trait ReleaseRuleHandler {
     fn handle(&self, message: &str) -> ConfigurationResult<()>;
 }
 
-impl ReleaseRuleHandler for ReleaseRuleDefinition {
+impl ReleaseRuleHandler for ReleaseRule {
     fn handle(&self, message: &str) -> ConfigurationResult<()> {
         match &self.format {
             ReleaseRuleFormat::Regex => {

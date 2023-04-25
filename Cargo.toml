@@ -9,7 +9,7 @@ documentation = "https://github.com/SofairOfficial/sleppa"
 homepage = "https://github.com/SofairOfficial/sleppa"
 repository = "https://github.com/SofairOfficial/sleppa"
 edition = "2021"
-rust-version = "1.67"
+rust-version = "1.69"
 
 # Global dependencies
 [workspace.dependencies]

@@ -1,4 +1,4 @@
-/// Enumerates all errors that can occur when processing a configuration file.
+/// Enumerates all errors that can occur when processing a configuration.
 ///
 /// This list is a central structure aiming to define errors that can occur
 /// while reading and parsing the configuration file.
