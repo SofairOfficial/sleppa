@@ -1,6 +1,6 @@
 //! # Configuration file parser
 //!
-//! This parser reads the `sleppa.toml` configuration file and converts it to Rust structure [Configuration].
+//! This parser reads the configuration file and converts it to Rust structure [Configuration].
 //! This configuration file must contain a `[release_rule]` section with three types of release actions, namely `major`, `minor` and `patch`.
 //! These three release action types are mandatory and must be written in lower case, as shown in the example below :
 //!
@@ -74,7 +74,7 @@ impl Configuration {
     }
 }
 
-/// The ReleaseRuleDefinition contains a grammar and the format associated to parse it.
+/// Release rule ressource
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReleaseRuleDefinition {
     /// The format is `Regex` or `Peg`
@@ -84,10 +84,10 @@ pub struct ReleaseRuleDefinition {
 }
 
 pub trait ReleaseRuleHandler {
-    /// Verifies if a commit message matches the grammar.
+    /// Verifies if a commit message matches a release rule grammar.
     ///
-    /// Reads a message, compares it to a `grammar` in a `format` (Regex or Peg)
-    /// and returns a boolean. True if there is a match , false otherwise.
+    /// The given commit message is parsed using the release rule's grammar and
+    /// in case it matches, an Ok(()) is returned.
     fn handle(&self, message: &str) -> ConfigurationResult<()>;
 }
 
@@ -113,18 +113,18 @@ impl ReleaseRuleHandler for ReleaseRuleDefinition {
     }
 }
 
-/// Parses a configuration file and create a [Configuration]
+/// Loads a configuration file given a file path name.
 ///
-/// Tries parsing the `sleppa.toml` configuration file and returns a [Configuration] or
-/// a [ConfigurationError].
-/// The `path` is the path to the configuration file `sleppa.toml`.
-/// The parsing returns a [ConfigurationError] if a [ReleaseAction] is missing or if the `format` is not recognized.
+/// The given toml configuration file is loaded and parsed, and if successful,
+/// a [Configuration] is returned or a [ConfigurationError] otherwise.
+/// The parsing returns a [ConfigurationError] if a [ReleaseAction] is missing or if the
+/// `format` is not recognized.
 pub fn try_parse(path: &Path) -> ConfigurationResult<Configuration> {
     let content = fs::read_to_string(path)?;
 
     let config: Configuration = toml::from_str(&content)?;
 
-    // Verify that `sleppa.toml` contains a release rule for each release action types.
+    // Verify that the configuration file contains a release rule for each release action types.
     if config.release_rules.get(&ReleaseAction::Major).is_none() {
         return Err(ConfigurationError::IncorrectReleaseAction(
             "major is missing".to_string(),

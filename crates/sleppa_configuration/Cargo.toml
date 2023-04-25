@@ -1,6 +1,6 @@
 [package]
 name = "sleppa_configuration"
-description = "Toml configuration file loader for Sleppa"
+description = "Configuration management"
 version = "0.1.0"
 
 keywords = [

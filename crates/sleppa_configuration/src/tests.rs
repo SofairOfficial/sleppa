@@ -83,7 +83,7 @@ fn test_fail_case_sensitive() -> TestResult<()> {
     let file_path = tmp_dir.path().join("sleppa.toml");
     let mut file = File::create(&file_path)?;
 
-    // The `sleppa.toml` file is case sensitive over "major", "minor" and "patch".
+    // The configuration file is case sensitive over "major", "minor" and "patch".
     writeln!(&mut file, "[release_rules]")?;
     writeln!(
         &mut file,
