@@ -1,0 +1,39 @@
+[package]
+name = "sleppa_configuration"
+description = "Configuration management"
+version = "0.1.0"
+
+keywords = [
+    "Sleppa",
+    "release-automation",
+    "semantic-release",
+    "configuration",
+    "parser",
+    "toml",
+]
+
+categories = ["Configuration"]
+
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+# External dependencies
+serde = { version = "^1.0.160", features = ["derive"] }
+toml = { version = "^0.7.3" }
+regex = { version = "^1.8.1" }
+tempfile = { version = "^3.5.0" }
+
+# Errors and logs processing
+thiserror = { workspace = true }
+
+[lib]
+name = "sleppa_configuration"
+crate-type = ["lib"]
+path = "src/lib.rs"
