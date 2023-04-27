@@ -1,0 +1,40 @@
+[package]
+name = "sleppa_commit_analyzer"
+description = "Retrieve commits inside squashed commit and analyze their message to provide a release type."
+version = "0.1.0"
+
+keywords = ["Sleppa", "release-automation", "semantic-release", "git-commit"]
+
+categories = ["development tools"]
+
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+# Local dependencies
+sleppa_configuration = { workspace = true }
+
+# External dependencies
+serde = { version = "^1.0.160", features = ["derive"] }
+regex = { version = "^1.8.1" }
+octocrab = { version = "^0.20.0" }
+tokio = { version = "1.28.0", features = ["macros"] }
+url = { version = "2.2.2", features = ["serde"] }
+
+# Errors and logs processing
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "1.28.0", default-features = false, features = ["macros"] }
+tokio-test = "0.4.2"
+
+[lib]
+name = "sleppa_commit_analyzer"
+crate-type = ["lib"]
+path = "src/lib.rs"
