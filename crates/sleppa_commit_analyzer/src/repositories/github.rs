@@ -111,7 +111,7 @@ impl Repository for GithubRepository {
 }
 
 impl GithubRepository {
-    /// Get the pull request's message
+    /// Get the pull request's name
     ///
     /// In a squash-and-merge strategy, the merged commits are pull-request. Therefore their name
     /// must be well formed e.g. "Issue to solve (#2)" in order to retrieve their number.
@@ -135,7 +135,6 @@ impl GithubRepository {
             // If a tag is found, only the repository commits until this tag are retrieved
             for item in repo_commits.items {
                 if item.sha != tag_sha {
-                    println!("item: {:?}, {:?}", item.sha, item.commit.message);
                     pull_request_messages.push(item.commit.message.to_string())
                 } else {
                     break;
@@ -183,7 +182,7 @@ impl GithubRepository {
     /// The inner commit's of a pull request are [RepoCommit] in octocrab.
     pub async fn get_inner_commits_from_pull_request(&self, pr_number: u64) -> RepositoriesResult<Vec<RepoCommit>> {
         // Format the route to the repository
-        let repo_address = format! {"/repos/{}/{}/pulls/{2}/commits", &self.owner, &self.repo, pr_number};
+        let repo_address = format! {"/repos/{}/{}/pulls/{}/commits", &self.owner, &self.repo, pr_number};
 
         // Retrieve the inner commits with the octocrab HTTP API
         let commits = octocrab::instance().get(repo_address, None::<&()>).await?;
