@@ -7,15 +7,15 @@ use serde::Deserialize;
 /// while getting and parsing commit's message.
 #[derive(thiserror::Error, Debug, Deserialize)]
 pub enum CommitAnalyzerError {
-    // No release action type match found
+    /// No release action type match found
     #[error("No release action found")]
     ErrorNoMatching(),
 
-    // Message is not correct
+    /// Message is not correct
     #[error("No release action found")]
     InvalidMessage(),
 
-    // Chained errors occuring when processing with GitHub
+    /// Chained errors occuring in GitHub API
     #[error(transparent)]
     GithubError(#[from] GitHubError),
 }

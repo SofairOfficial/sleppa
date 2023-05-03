@@ -1,9 +1,9 @@
-/// Error enumeration for the `repositories` module.
+/// Enumerates errors that could occur when working with repositories.
 ///
 /// This list is a central structure aiming to define errors that can occur
 /// while processing with repositories.
 #[derive(thiserror::Error, Debug)]
-pub enum RepositoriesError {
+pub enum RepositoryError {
     // Chained errors occuring when processing with GitHub
     #[error(transparent)]
     GithubError(#[from] octocrab::GitHubError),
@@ -26,4 +26,4 @@ pub enum RepositoriesError {
 }
 
 /// Definition of the commit analyzer result
-pub type RepositoriesResult<R> = Result<R, RepositoriesError>;
+pub type RepositoryResult<R> = Result<R, RepositoryError>;

@@ -2,13 +2,19 @@
 //!
 //! This testing module implements the unit tests for testing the commit analyzer routines.
 
-use super::repositories::{github::GithubRepository, Repository};
-use super::*;
+use super::{
+    repositories::{github::*, Repository},
+    *,
+};
+//{
+//    repositories::{github::GithubRepository, Repository},
+//    *,
+//};
 
-/// Tests the function `execute`.
-///
-/// The `execute` function must return a [ReleaseAction] if the message matches the defined regex.
-/// A [CommitAnalyzerError] is returned if no matches.
+// Tests the function `execute`.
+//
+// The `execute` function must return a [ReleaseAction] if the message matches the defined regex.
+// A [CommitAnalyzerError] is returned if no matches.
 #[test]
 fn test_can_execute() {
     // Unit test preparation
@@ -72,11 +78,11 @@ fn test_can_execute() {
         .is_err());
 }
 
-/// Tests the function `analyze`.
-///
-/// The `analyze` function analyzes multiple messages and return the highest
-/// [ReleaseAction] found from them.
-/// If a ReleaseAction is not found, a `None` is returned.
+// Tests the function `analyze`.
+//
+// The `analyze` function analyzes multiple messages and return the highest
+// [ReleaseAction] found from them.
+// If a ReleaseAction is not found, a `None` is returned.
 #[test]
 fn test_can_analyze() {
     // Unit test preparation
@@ -139,10 +145,10 @@ fn test_can_analyze() {
     assert!(analyzer.analyze(correct_no_release, &config.release_rules).is_none());
 }
 
-/// Tests the function `get_pull_request_number_from_its_name`.
-///
-/// This function analyzes the name of a pull request and retrieve its number as u64.
-/// If none is found a [RepositoriesError] is returned.
+// Tests the function `get_pull_request_number_from_its_name`.
+//
+// This function analyzes the name of a pull request and retrieve its number as u64.
+// If none is found a [RepositoriesError] is returned.
 #[test]
 fn test_can_get_pull_request_number_from_its_name() {
     // Unit test preparation
@@ -168,12 +174,12 @@ fn test_can_get_pull_request_number_from_its_name() {
     assert!(GithubRepository::get_pull_request_number_from_its_name(incorrect_no_hashtag).is_err());
 }
 
-/// Tests the function `get_last_tag`.
-///
-/// This function retrieves the last tag of a repository. As it works with [octocrab], the http request
-/// is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
-/// repository has been created.
-/// The tag of this repo is "v1.0.0" and its associated hash : "cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a"
+// Tests the function `get_last_tag`.
+//
+// This function retrieves the last tag of a repository. As it works with [octocrab], the http request
+// is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
+// repository has been created.
+// The tag of this repo is "v1.0.0" and its associated hash : "cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a"
 #[tokio::test]
 async fn test_can_get_last_tag() -> TestResult<()> {
     // Unit test preparation
@@ -187,23 +193,23 @@ async fn test_can_get_last_tag() -> TestResult<()> {
     let response = githubrepository.get_last_tag().await?;
 
     // Asserts the name of the tag and its hash are ok.
-    assert_eq!(response.tag_id, "v1.0.0");
-    assert_eq!(response.tag_hash, "cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a");
+    assert_eq!(response.identifier, "v1.0.0");
+    assert_eq!(response.hash, "cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a");
     Ok(())
 }
 
-/// Tests the function `get_pull_request`.
-///
-/// This function retrieves the pull request since a tag. As it works with [octocrab], the http request
-/// is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
-/// repository has been created.
-/// The tag of this repo is "v1.0.0" and its associated hash : "cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a"
-/// 3 pull requests have been done on the repository :
-///  - Issue-to-solve-3
-///  - Issue-to-solve-2 (#2)
-///  - Issue-to-solve-1 (#1)
-///
-/// As the `Issue-to-solve-1 (#1)` is linked to the last tag, it will be ignored.
+// Tests the function `get_pull_request`.
+//
+// This function retrieves the pull request since a tag. As it works with [octocrab], the http request
+// is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
+// repository has been created.
+// The tag of this repo is "v1.0.0" and its associated hash : "cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a"
+// 3 pull requests have been done on the repository :
+//  - Issue-to-solve-3
+//  - Issue-to-solve-2 (#2)
+//  - Issue-to-solve-1 (#1)
+//
+// As the `Issue-to-solve-1 (#1)` is linked to the last tag, it will be ignored.
 #[tokio::test]
 async fn test_can_get_pull_request() -> TestResult<()> {
     // Unit test preparation
@@ -224,13 +230,13 @@ async fn test_can_get_pull_request() -> TestResult<()> {
     Ok(())
 }
 
-/// Tests the function `get_inner_commits_from_pull_request`.
-///
-/// This function retrieves the pull request's inner commits from a pull request number. As it works with [octocrab],
-/// the http request is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
-/// repository has been created.
-/// The last valid pull request number comes from the name "Issue-to-solve-2 (#2)", hence the pull request's number to
-/// analyze is `2`.
+// Tests the function `get_inner_commits_from_pull_request`.
+//
+// This function retrieves the pull request's inner commits from a pull request number. As it works with [octocrab],
+// the http request is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
+// repository has been created.
+// The last valid pull request number comes from the name "Issue-to-solve-2 (#2)", hence the pull request's number to
+// analyze is `2`.
 #[tokio::test]
 async fn test_can_get_inner_commits_from_pull_request() -> TestResult<()> {
     // Unit test preparation
@@ -254,13 +260,13 @@ async fn test_can_get_inner_commits_from_pull_request() -> TestResult<()> {
     Ok(())
 }
 
-/// Tests the function `get_inner_commits_messages`.
-///
-/// This function retrieves the pull request's inner commits message from a repository. As it works with [octocrab],
-/// the http request is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
-/// repository has been created.
-/// The function retrieves the last tag (`v1.0.0`), get the pull requests since this tag, analyzes their name, extracts the
-/// pull request number and retrieves all the inner commit's messages.
+// Tests the function `get_inner_commits_messages`.
+//
+// This function retrieves the pull request's inner commits message from a repository. As it works with [octocrab],
+// the http request is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
+// repository has been created.
+// The function retrieves the last tag (`v1.0.0`), get the pull requests since this tag, analyzes their name, extracts the
+// pull request number and retrieves all the inner commit messages.
 #[tokio::test]
 async fn test_can_get_inner_commits_messages() -> TestResult<()> {
     let githubrepository = GithubRepository {
@@ -269,7 +275,7 @@ async fn test_can_get_inner_commits_messages() -> TestResult<()> {
     };
 
     // Execution step
-    let response = githubrepository.get_inner_commits_messages().await?;
+    let response = githubrepository.get_inner_commits().await?;
 
     // Asserts the name of retrived pull request are corrects.
     assert_eq!(response[0], "patch:some patch");
@@ -279,5 +285,5 @@ async fn test_can_get_inner_commits_messages() -> TestResult<()> {
     Ok(())
 }
 
-/// Unit test result type
+// Unit test result type
 pub type TestResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;

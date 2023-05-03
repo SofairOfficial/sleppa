@@ -1,6 +1,6 @@
 [package]
 name = "sleppa_commit_analyzer"
-description = "Retrieve commits inside squashed commit and analyze their message to provide a release type."
+description = "Analyzer calculating a semantic release version based on commit messages contents."
 version = "0.1.0"
 
 keywords = ["Sleppa", "release-automation", "semantic-release", "git-commit"]
