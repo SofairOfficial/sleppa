@@ -11,8 +11,15 @@ repository = "https://github.com/SofairOfficial/sleppa"
 edition = "2021"
 rust-version = "1.69"
 
+
 # Global dependencies
 [workspace.dependencies]
+
+# Local dependencies
+sleppa_configuration = { version = "0.1.0", path = "crates/sleppa_configuration" }
+sleppa_commit_analyzer = { version = "0.1.0", path = "crates/sleppa_commit_analyzer" }
+
+# Errors processing
 thiserror = { version = "1.0.40" }
 
 [profile.release]
