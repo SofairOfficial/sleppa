@@ -28,7 +28,7 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 tempfile = { version = "^3.5" }
-rstest = { version = "0.17" }
+rstest = { version = "^0.17" }
 
 [lib]
 name = "sleppa_changelog"

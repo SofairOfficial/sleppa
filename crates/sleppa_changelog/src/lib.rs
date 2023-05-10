@@ -5,7 +5,7 @@
 //!
 //! The commits are loaded and according to their message, different sections in the file
 //! will be written.
-//! These sections represent the type of commit.
+//! These sections represent the sorted type of commit.
 //!
 //! The changelog file looks like :
 //!
@@ -16,12 +16,13 @@
 //!  * new breaking ([1ebdf43e](https://github.com/user/repo/commit/1ebdf43e8950d8f9dace2e554be5d387267575ef))
 //! * **feat**
 //!  * new feature ([172cd158](https://github.com/user/repo/commit/172cd1589d0a29b56cd8261a888911201305b04d))
+//!  * a feature ([987cd158](https://github.com/user/repo/commit/8987cd1589d0a29b56cd8261a888911201305b04d))
 //! * **patch**
 //!  * new patch ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))
 //!```
 //!
 //! While the file is written, it has to be automatically commited to the reposiroty with a message : `Release v4.0.0`
-//! along with the new tag.
+//! where `v4.0.0` is the new tag.
 
 mod errors;
 
@@ -34,15 +35,17 @@ use std::process::Command;
 use time::{format_description, OffsetDateTime};
 
 /// The default path for the changelog file.
-pub const FILE_PATH: &str = "changelogs/CHANGELOG.md";
+pub const CHANGELOG_DEFAULT_PATH: &str = "changelogs/CHANGELOG.md";
 
-/// Define the Changelog with its fields.
+/// Defines the Changelog and its fields.
 ///
 /// Changelog structure contains mandatory elements to create the file, namely, the map between commit type and
 /// commit messages, the last tag, the new tag and the URL of the repository.
+/// The URL is used to write hlink in the changelog file, therefore using a String here is sufficient.
 #[derive(Default)]
 pub struct ChangelogPlugin {
-    /// Sections is the commit's type (the keys) associated with their [Commit]s (the value).
+    /// Sections are represented by the commit's type (the keys) associated with their [Commit]s (the value).
+    /// As the order of the key is important, a [BTreeMap] is needed here.
     pub sections: BTreeMap<String, Vec<Commit>>,
     /// The reposiroty's previous tag
     pub last_tag: String,
@@ -71,9 +74,9 @@ impl ChangelogPlugin {
         ChangelogPlugin::default()
     }
 
-    /// Build ChangelogPlugin from verified commits
+    /// Builds ChangelogPlugin from verified commits
     ///
-    /// Maps the commit types (the key) to a vector of commit messages (the value) for the section
+    /// Maps the commit types (the key) to a vector of commit messages (the value) for the sections
     /// field of a [ChangelogPlugin]. Therefore, the key value contains a vector of commit messages with
     /// the same type.
     fn build_from_commits(&mut self, commits: Vec<Commit>, last_tag: &str, new_tag: &str, repo_url: &str) -> &Self {
@@ -111,11 +114,13 @@ impl ChangelogPlugin {
 
         match path.try_exists() {
             Ok(true) => {
+                // The file exists: reads it and stores its content.
                 file = File::open(path)?;
                 file.read_to_string(&mut buffer)?;
             }
             Ok(false) => {
-                create_dir_all(path.parent().unwrap_or(Path::new(FILE_PATH)))?;
+                // The file doesn't exist: creates directory according the provided path.
+                create_dir_all(path.parent().unwrap_or(Path::new(CHANGELOG_DEFAULT_PATH)))?;
             }
             Err(err) => return Err(ChangelogError::IoError(err)),
         }
@@ -135,10 +140,10 @@ impl ChangelogPlugin {
         let date_format = format_description::parse("[year]-[month]-[day]")?;
         let date = now.format(&date_format)?;
 
-        // Writes the tag, its link and the date as header.
+        // Writes the tag, its compare link and the date as header.
         writeln!(&mut file, "{version_text} ({date})\n",)?;
 
-        // Loops over [ChangelogPlugin]'s section field to write the file
+        // Loops over [ChangelogPlugin]'s sections field to write the file
         for (commit_type, commits) in &self.sections {
             writeln!(&mut file, "* **{commit_type}**")?;
 
@@ -159,14 +164,14 @@ impl ChangelogPlugin {
 
     /// Commits the new changelog file and the new tag
     ///
-    /// This function commits the file to the repository with the provided path and the new tag.
+    /// This function commits the file to the repository with the provided path.
     /// The commit message is like `Release v3.2.1`.
     fn commit_changelog(&self) -> ChangelogResult<()> {
         let commit_user = r#"git user.name="Sofair Maintainers""#.to_string();
         let commit_user_email = r#"git user.mail="maintainers@sofair.io""#.to_string();
+        // To do : the credentials will be provided by the context
         let commit_user_signingkey = r#"user.signingkey="""#.to_string();
         let commit_message = format!(r#"git commit -m "Release {}""#, &self.new_tag);
-        let commit_tag = format!(r#"git tag "{}"#, &self.new_tag);
 
         match Command::new("/bin/sh")
             .arg(commit_user)
@@ -174,8 +179,7 @@ impl ChangelogPlugin {
             .arg(commit_user_signingkey)
             .arg("git add -A")
             .arg(commit_message)
-            .arg(commit_tag)
-            .arg("git push --tags")
+            .arg("git push")
             .status()
         {
             Ok(_) => Ok(()),
@@ -188,7 +192,7 @@ impl ChangelogPlugin {
     /// This function builds the [ChangelogPlugin] from a vector of [Commit]s and writes the file to a
     /// provided path.
     /// The file is written using the commits messages as source of information. The changelog groups the
-    /// commits from their type.
+    /// commits using their type.
     pub fn run(
         &mut self,
         changelog_path: &Path,
@@ -203,7 +207,7 @@ impl ChangelogPlugin {
         // Creates the changelog file
         self.serialize(changelog_path)?;
 
-        // Commits the changelot file to the repository
+        // Commits the changelog file to the repository
         self.commit_changelog()?;
         Ok(())
     }

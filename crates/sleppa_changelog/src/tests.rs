@@ -6,18 +6,18 @@ use super::*;
 use rstest::*;
 use tempfile::tempdir;
 
-/// Use fixture to create a reusable component
+// Use fixture to create a reusable component
 #[fixture]
 fn commits_constructor() -> Vec<Commit> {
-    // Creates multiple commit
-    // break type
+    // Creates multiple commit types :
+    // Type : break
     let commit1 = Commit {
         message: "break: new breaking".to_string(),
         commit_type: "break".to_string(),
         hash: "1ebdf43e8950d8f9dace2e554be5d387267575ef".to_string(),
     };
 
-    // feat type
+    // Type : feat
     let commit2_1 = Commit {
         message: "feat: new feature".to_string(),
         commit_type: "feat".to_string(),
@@ -29,7 +29,7 @@ fn commits_constructor() -> Vec<Commit> {
         hash: "000cd1589d0a29b56cd8261a888911201305b04d".to_string(),
     };
 
-    // patch type
+    // type : patch
     let commit3_1 = Commit {
         message: "patch: new patch".to_string(),
         commit_type: "patch".to_string(),
@@ -86,7 +86,7 @@ fn test_can_build_from_commit(commits_constructor: Vec<Commit>) -> TestResult<()
 
 // Tests the method `execute` with a new file.
 //
-// The method returns a [ChangelogResult] and creates then writes a changelog file.
+// The method returns a [ChangelogResult]. It also creates and then writes a changelog file.
 #[rstest]
 fn test_can_serialize_file_exists(commits_constructor: Vec<Commit>) -> TestResult<()> {
     // Unit test preparation
@@ -134,7 +134,7 @@ fn test_can_serialize_file_exists(commits_constructor: Vec<Commit>) -> TestResul
 
 // Tests the method `execute` with an existing changelog file.
 //
-// The method returns a [ChangelogResult] and writes a changelog file into one already existing.
+// The method returns a [ChangelogResult] and writes a changelog file into one existing file.
 // It appends the text to the new changelog file in a reverse chronological order.
 #[rstest]
 fn test_can_serialize_file_not_exist(commits_constructor: Vec<Commit>) -> TestResult<()> {
@@ -178,7 +178,7 @@ fn test_can_serialize_file_not_exist(commits_constructor: Vec<Commit>) -> TestRe
         " * patch: new patch ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
         " * patch: another patch ([000fe770](https://github.com/user/repo/commit/000fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
         " * patch: also a patch ([111fe770](https://github.com/user/repo/commit/111fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n\n\n" +
-        "This is a changelog file\n"; // This is the text already in the file
+        "This is a changelog file\n"; // Taxt that was already in the file
 
     // Asserts equality
     assert_eq!(test_file, buffer);

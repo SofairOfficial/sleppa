@@ -1,7 +1,7 @@
-/// Enumerates errors that could occur when working with changelog.
+/// Enumerates errors that could occur when generating changelog.
 ///
 /// This list is a central structure aiming to define errors that can occur
-/// while processing with changelog.
+/// while generating the changelog.
 #[derive(thiserror::Error, Debug)]
 pub enum ChangelogError {
     /// Chained I/O errors
