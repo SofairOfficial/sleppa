@@ -1,15 +1,15 @@
-//! Sleppa changelog management package
+//! Sleppa changelog file generator
 //!
-//! This package aims to generate the changelog file of a reporistory according the last tag
+//! This package aims to generate the changelog file of a reporistory according to the last tag
 //! and its associated commits.
 //!
-//! The commits will be load and according to their message, different sections in the file
+//! The commits are loaded and according to their message, different sections in the file
 //! will be written.
 //! These sections represent the type of commit.
 //!
 //! The changelog file looks like :
 //!
-//!```
+//!```toml
 //! ### [v4.0.0](https://github.com/user/repo/compare/v3.2.1..v4.0.0) (2023-05-05)
 //!
 //! * **break**
@@ -20,10 +20,8 @@
 //!  * new patch ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))
 //!```
 //!
-//! While the file is written, it has to be automatically commited to the reposiroty with a message : `Release v4.0.0`.
-//!
-//!
-//!
+//! While the file is written, it has to be automatically commited to the reposiroty with a message : `Release v4.0.0`
+//! along with the new tag.
 
 mod errors;
 
@@ -32,28 +30,34 @@ use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
 use std::path::Path;
+use std::process::Command;
 use time::{format_description, OffsetDateTime};
+
+/// The default path for the changelog file.
+pub const FILE_PATH: &str = "changelogs/CHANGELOG.md";
 
 /// Define the Changelog with its fields.
 ///
 /// Changelog structure contains mandatory elements to create the file, namely, the map between commit type and
 /// commit messages, the last tag, the new tag and the URL of the repository.
 #[derive(Default)]
-pub struct Changelog {
+pub struct ChangelogPlugin {
     /// Sections is the commit's type (the keys) associated with their [Commit]s (the value).
     pub sections: BTreeMap<String, Vec<Commit>>,
     /// The reposiroty's previous tag
     pub last_tag: String,
     /// The repository's new tag
     pub new_tag: String,
-    /// The repository's URL
+    /// The repository's URL like `https://github.com/USER/REPO`
     pub repo_url: String,
 }
 
 /// Defines Commit and its fields used for the changelog
-#[derive(Debug, Clone)]
+///
+// To do: creates the sleppa_primitives crate
+#[derive(Debug, Clone, PartialEq)]
 pub struct Commit {
-    /// The 40 char hash
+    /// long commit hash format
     pub hash: String,
     /// The commit message
     pub message: String,
@@ -61,85 +65,57 @@ pub struct Commit {
     pub commit_type: String,
 }
 
-/// Defines the contracts between a configuration and the changelog.
-pub trait ChangelogConfiguration {
-    /// Retrieves the path to the changelog file.
-    ///
-    /// Default path is `./changelogs/CHANGELOG.md`
-    fn load_changelog_configuration(&self) -> &Path {
-        let default_path = Path::new("./changelogs/CHANGELOG.md");
-        default_path
-    }
-}
-
-/// Defines the contract to bring analyzed commit to changelog.
-pub trait ChangelogCommit {
-    /// Brings the verified commits since the last tag.
-    fn load_changelog_commits(&self) -> Vec<Commit>;
-}
-
-impl Changelog {
+impl ChangelogPlugin {
     /// Implementation of the `new` method : `ChangelogMap::new()`
     pub fn new() -> Self {
-        Changelog::default()
+        ChangelogPlugin::default()
     }
 
-    /// Creates a new Changelog from verified commits
+    /// Build ChangelogPlugin from verified commits
     ///
     /// Maps the commit types (the key) to a vector of commit messages (the value) for the section
-    /// field of a [Changelog]. Therefore, the key value contains a vector of commit messages with
+    /// field of a [ChangelogPlugin]. Therefore, the key value contains a vector of commit messages with
     /// the same type.
-    pub fn new_from_commits<C>(commits_to_analyze: C) -> Self
-    where
-        C: ChangelogCommit,
-    {
-        let mut changelog_map = Changelog::new();
-        // Brings the verified commits
-        let commits = commits_to_analyze.load_changelog_commits();
-
+    fn build_from_commits(&mut self, commits: Vec<Commit>, last_tag: &str, new_tag: &str, repo_url: &str) -> &Self {
+        self.last_tag = last_tag.into();
+        self.new_tag = new_tag.into();
+        self.repo_url = repo_url.into();
         for commit in &commits {
-            if changelog_map.sections.contains_key(&commit.commit_type) {
+            if self.sections.contains_key(&commit.commit_type) {
                 // If the key exists, append the commit to the value.
-                let mut existing_value = changelog_map.sections[&commit.commit_type].clone();
+                let mut existing_value = self.sections[&commit.commit_type].clone();
                 existing_value.push(commit.clone());
 
-                changelog_map
-                    .sections
-                    .insert(commit.commit_type.to_string(), existing_value);
+                self.sections.insert(commit.commit_type.to_string(), existing_value);
             } else {
-                // If the key doesn't exists, creates it and add the commit to the value.
-                changelog_map
-                    .sections
+                // If the key doesn't exists, creates it and adds the commit to the value.
+                self.sections
                     .insert(commit.commit_type.to_string(), vec![commit.clone()]);
             }
         }
-        changelog_map
+        self
     }
 
-    /// Writes the changelog file
+    /// Writes the CHANGELOG.md file
     ///
     /// This function writes the changelog file to a provided path from a configuration file.
-    /// It creates the file id it doesn't exist. It appends the new log to the file if it already exists.
-    /// The log are written in a inverse chronological order, hence the most recent at the top.
-    pub fn write_changelog<P>(&self, config: P) -> ChangelogResult<()>
-    where
-        P: ChangelogConfiguration,
-    {
+    /// It creates the file if it doesn't exist. It appends the new log to the file if it already exists.
+    /// The log are written in a reverse chronological order, hence the most recent at the top.
+    fn serialize(&self, changelog_path: &Path) -> ChangelogResult<()> {
         // Loads the path from the configuration file
-        let path = config.load_changelog_configuration();
+        let path = Path::new(changelog_path);
 
         let mut file: File;
         // Creates a buffer to keep the existing changelog
         let mut buffer = String::new();
 
-        // TOCTOU Attacks possible / dangerous here?
         match path.try_exists() {
             Ok(true) => {
                 file = File::open(path)?;
                 file.read_to_string(&mut buffer)?;
             }
             Ok(false) => {
-                create_dir_all(path.parent().unwrap_or(Path::new("changelogs/")))?;
+                create_dir_all(path.parent().unwrap_or(Path::new(FILE_PATH)))?;
             }
             Err(err) => return Err(ChangelogError::IoError(err)),
         }
@@ -162,22 +138,76 @@ impl Changelog {
         // Writes the tag, its link and the date as header.
         writeln!(&mut file, "{version_text} ({date})\n",)?;
 
-        // Loops over [Changelog]'s section field to write the file
+        // Loops over [ChangelogPlugin]'s section field to write the file
         for (commit_type, commits) in &self.sections {
             writeln!(&mut file, "* **{commit_type}**")?;
 
-            for entry in commits {
-                let hash = &entry.hash;
+            for commit in commits {
+                let hash = &commit.hash;
                 let link = format!("{}/commit/{}", self.repo_url, hash);
-                write!(&mut file, " * {} ([{}]({}))\n", entry.message, &entry.hash[0..8], link)?;
+                writeln!(&mut file, " * {} ([{}]({}))", commit.message, &commit.hash[0..8], link)?;
             }
         }
 
-        writeln!(&mut file, "\n\n")?;
+        writeln!(&mut file, "\n")?;
 
         // Appends the previous changelog to the file
-        file.write(buffer.as_bytes())?;
+        file.write_all(buffer.as_bytes())?;
 
         Ok(())
     }
+
+    /// Commits the new changelog file and the new tag
+    ///
+    /// This function commits the file to the repository with the provided path and the new tag.
+    /// The commit message is like `Release v3.2.1`.
+    fn commit_changelog(&self) -> ChangelogResult<()> {
+        let commit_user = r#"git user.name="Sofair Maintainers""#.to_string();
+        let commit_user_email = r#"git user.mail="maintainers@sofair.io""#.to_string();
+        let commit_user_signingkey = r#"user.signingkey="""#.to_string();
+        let commit_message = format!(r#"git commit -m "Release {}""#, &self.new_tag);
+        let commit_tag = format!(r#"git tag "{}"#, &self.new_tag);
+
+        match Command::new("/bin/sh")
+            .arg(commit_user)
+            .arg(commit_user_email)
+            .arg(commit_user_signingkey)
+            .arg("git add -A")
+            .arg(commit_message)
+            .arg(commit_tag)
+            .arg("git push --tags")
+            .status()
+        {
+            Ok(_) => Ok(()),
+            Err(err) => Err(ChangelogError::IoError(err)),
+        }
+    }
+
+    /// Writes the changelog file from the last tag of a repository
+    ///
+    /// This function builds the [ChangelogPlugin] from a vector of [Commit]s and writes the file to a
+    /// provided path.
+    /// The file is written using the commits messages as source of information. The changelog groups the
+    /// commits from their type.
+    pub fn run(
+        &mut self,
+        changelog_path: &Path,
+        repo_url: &str,
+        commits: Vec<Commit>,
+        last_tag: &str,
+        new_tag: &str,
+    ) -> ChangelogResult<()> {
+        // Builds the [ChangelogPlugin] from commits, last tag and new tag
+        self.build_from_commits(commits, last_tag, new_tag, repo_url);
+
+        // Creates the changelog file
+        self.serialize(changelog_path)?;
+
+        // Commits the changelot file to the repository
+        self.commit_changelog()?;
+        Ok(())
+    }
 }
+
+#[cfg(test)]
+mod tests;

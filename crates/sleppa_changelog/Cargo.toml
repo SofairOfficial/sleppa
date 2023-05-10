@@ -18,15 +18,17 @@ rust-version.workspace = true
 [dependencies]
 
 # Local dependencies
-#sleppa_configuration = { workspace = true }
+sleppa_configuration = { workspace = true }
 
 # External dependencies
-time = { version = "0.3.20", features = ["formatting"] }
+time = { version = "^0.3", features = ["formatting"] }
 
 # Errors and logs processing
 thiserror = { workspace = true }
 
 [dev-dependencies]
+tempfile = { version = "^3.5" }
+rstest = { version = "0.17" }
 
 [lib]
 name = "sleppa_changelog"
