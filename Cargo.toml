@@ -16,11 +16,12 @@ rust-version = "1.69"
 [workspace.dependencies]
 
 # Local dependencies
-sleppa_configuration = { version = "0.1.0", path = "crates/sleppa_configuration" }
+sleppa_changelog = { version = "0.1.0", path = "crates/sleppa_changelog" }
 sleppa_commit_analyzer = { version = "0.1.0", path = "crates/sleppa_commit_analyzer" }
+sleppa_configuration = { version = "0.1.0", path = "crates/sleppa_configuration" }
 
 # Errors processing
-thiserror = { version = "1.0.40" }
+thiserror = { version = "^1.0" }
 
 [profile.release]
 lto = true

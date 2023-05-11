@@ -2,11 +2,11 @@
 //!
 //! This testing module implements the unit tests for testing the changelog generator routines.
 
-use super::*;
+use super::{errors::*, *};
 use rstest::*;
 use tempfile::tempdir;
 
-// Use fixture to create a reusable component
+// Use fixture to create a reusable list of commits
 #[fixture]
 fn commits_constructor() -> Vec<Commit> {
     // Creates multiple commit types :
@@ -29,7 +29,7 @@ fn commits_constructor() -> Vec<Commit> {
         hash: "000cd1589d0a29b56cd8261a888911201305b04d".to_string(),
     };
 
-    // type : patch
+    // Type : patch
     let commit3_1 = Commit {
         message: "patch: new patch".to_string(),
         commit_type: "patch".to_string(),
@@ -51,11 +51,9 @@ fn commits_constructor() -> Vec<Commit> {
     commits
 }
 
-// Tests the method `build_from_commits`.
-//
-// The method must return a &[ChangelogPlugin] with convenient provided fields.
+// Tests the instantiation of a new changelog generator plugin with a given list of commits.
 #[rstest]
-fn test_can_build_from_commit(commits_constructor: Vec<Commit>) -> TestResult<()> {
+fn test_can_build_with_commit(commits_constructor: Vec<Commit>) -> TestResult<()> {
     // Unit test preparation
     let last_tag = "v3.2.1";
     let new_tag = "v4.0.0";
@@ -73,7 +71,7 @@ fn test_can_build_from_commit(commits_constructor: Vec<Commit>) -> TestResult<()
     );
 
     // Execution step
-    changelog_plugin.build_from_commits(commits, last_tag, new_tag, repo_url);
+    changelog_plugin.with_commits(commits, last_tag, new_tag, repo_url);
 
     // Asserts the builded [ChangelogPlugin] is correct
     assert_eq!(changelog_plugin.last_tag, last_tag);
@@ -84,9 +82,7 @@ fn test_can_build_from_commit(commits_constructor: Vec<Commit>) -> TestResult<()
     Ok(())
 }
 
-// Tests the method `execute` with a new file.
-//
-// The method returns a [ChangelogResult]. It also creates and then writes a changelog file.
+// Tests the serialization of the changelog into a newly created CHANGELOG.md.
 #[rstest]
 fn test_can_serialize_file_exists(commits_constructor: Vec<Commit>) -> TestResult<()> {
     // Unit test preparation
@@ -101,7 +97,7 @@ fn test_can_serialize_file_exists(commits_constructor: Vec<Commit>) -> TestResul
     let commits = commits_constructor;
     let mut changelog_plugin = ChangelogPlugin::new();
 
-    changelog_plugin.build_from_commits(commits, last_tag, new_tag, repo_url);
+    changelog_plugin.with_commits(commits, last_tag, new_tag, repo_url);
 
     changelog_plugin.serialize(&file_path)?;
 
@@ -132,10 +128,7 @@ fn test_can_serialize_file_exists(commits_constructor: Vec<Commit>) -> TestResul
     Ok(())
 }
 
-// Tests the method `execute` with an existing changelog file.
-//
-// The method returns a [ChangelogResult] and writes a changelog file into one existing file.
-// It appends the text to the new changelog file in a reverse chronological order.
+// Tests the serialization of the changelog into an existing CHANGELOG.md file.
 #[rstest]
 fn test_can_serialize_file_not_exist(commits_constructor: Vec<Commit>) -> TestResult<()> {
     // Unit test preparation
@@ -154,7 +147,7 @@ fn test_can_serialize_file_not_exist(commits_constructor: Vec<Commit>) -> TestRe
     let commits = commits_constructor;
     let mut changelog_plugin = ChangelogPlugin::new();
 
-    changelog_plugin.build_from_commits(commits, last_tag, new_tag, repo_url);
+    changelog_plugin.with_commits(commits, last_tag, new_tag, repo_url);
 
     changelog_plugin.serialize(&file_path)?;
 
@@ -185,6 +178,3 @@ fn test_can_serialize_file_not_exist(commits_constructor: Vec<Commit>) -> TestRe
 
     Ok(())
 }
-
-// Unit test result type
-pub type TestResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;

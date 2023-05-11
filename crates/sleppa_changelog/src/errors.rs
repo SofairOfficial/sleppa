@@ -1,4 +1,4 @@
-/// Enumerates errors that could occur when generating changelog.
+/// Enumerates errors that could occur when generating changelog file.
 ///
 /// This list is a central structure aiming to define errors that can occur
 /// while generating the changelog.
@@ -17,5 +17,9 @@ pub enum ChangelogError {
     InvalidFormat(#[from] time::error::Format),
 }
 
-/// Definition of the changelog result
+/// Result type alias returned by function.
 pub type ChangelogResult<R> = Result<R, ChangelogError>;
+
+#[cfg(test)]
+/// Result type alias returned by function in unit tests.
+pub type TestResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;

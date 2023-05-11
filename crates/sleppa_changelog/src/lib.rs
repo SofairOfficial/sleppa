@@ -1,7 +1,8 @@
 //! Sleppa changelog file generator
 //!
-//! This package aims to generate the changelog file of a reporistory according to the last tag
-//! and its associated commits.
+//! This package aims at generating the changelog file for a given semantic release. For doing so,
+//! it takes as inputs the Git tags from the latest and newest releases, as well as the list of
+//! conventionnal commits, and generate an output file.
 //!
 //! The commits are loaded and according to their message, different sections in the file
 //! will be written.
@@ -24,8 +25,10 @@
 //! While the file is written, it has to be automatically commited to the reposiroty with a message : `Release v4.0.0`
 //! where `v4.0.0` is the new tag.
 
+mod constants;
 mod errors;
 
+use constants::CHANGELOG_DEFAULT_PATH;
 use errors::{ChangelogError, ChangelogResult};
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
@@ -33,9 +36,6 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::Command;
 use time::{format_description, OffsetDateTime};
-
-/// The default path for the changelog file.
-pub const CHANGELOG_DEFAULT_PATH: &str = "changelogs/CHANGELOG.md";
 
 /// Defines the Changelog and its fields.
 ///
@@ -56,30 +56,31 @@ pub struct ChangelogPlugin {
 }
 
 /// Defines Commit and its fields used for the changelog
-///
-// To do: creates the sleppa_primitives crate
 #[derive(Debug, Clone, PartialEq)]
 pub struct Commit {
-    /// long commit hash format
+    /// long commit identifier (i.e. 40 digits long SHA-1 hash)
     pub hash: String,
-    /// The commit message
+    /// The commit message like: `feat(github): a new feature`
     pub message: String,
-    /// The commit type
+    /// Commit message type value, e.g. `feat`, `break`, `refac`, etc.
     pub commit_type: String,
 }
 
 impl ChangelogPlugin {
-    /// Implementation of the `new` method : `ChangelogMap::new()`
+    /// Implementation of the `new` method : `ChangelogPlugin::new()`.
     pub fn new() -> Self {
         ChangelogPlugin::default()
     }
 
-    /// Builds ChangelogPlugin from verified commits
+    /// Builds a new changelog plugin instance based on a given list of verified commits.
     ///
     /// Maps the commit types (the key) to a vector of commit messages (the value) for the sections
-    /// field of a [ChangelogPlugin]. Therefore, the key value contains a vector of commit messages with
-    /// the same type.
-    fn build_from_commits(&mut self, commits: Vec<Commit>, last_tag: &str, new_tag: &str, repo_url: &str) -> &Self {
+    /// field of a [ChangelogPlugin]. Therefore, the key contains a vector of commit messages with
+    /// the same type, e.g. :
+    /// BTreeMap<["break", ["break: breaking change", "break(github): a change"]],
+    ///          ["feat", ["feat: some feature", "feat(github): another feature"]],
+    ///          ["refac", ["refac: add comments"]]>
+    fn with_commits(&mut self, commits: Vec<Commit>, last_tag: &str, new_tag: &str, repo_url: &str) -> &Self {
         self.last_tag = last_tag.into();
         self.new_tag = new_tag.into();
         self.repo_url = repo_url.into();
@@ -99,7 +100,7 @@ impl ChangelogPlugin {
         self
     }
 
-    /// Writes the CHANGELOG.md file
+    /// Saves the changelog file contents to the filesystem
     ///
     /// This function writes the changelog file to a provided path from a configuration file.
     /// It creates the file if it doesn't exist. It appends the new log to the file if it already exists.
@@ -187,7 +188,7 @@ impl ChangelogPlugin {
         }
     }
 
-    /// Writes the changelog file from the last tag of a repository
+    /// Executes the main function of the changelog generator plugin
     ///
     /// This function builds the [ChangelogPlugin] from a vector of [Commit]s and writes the file to a
     /// provided path.
@@ -202,7 +203,7 @@ impl ChangelogPlugin {
         new_tag: &str,
     ) -> ChangelogResult<()> {
         // Builds the [ChangelogPlugin] from commits, last tag and new tag
-        self.build_from_commits(commits, last_tag, new_tag, repo_url);
+        self.with_commits(commits, last_tag, new_tag, repo_url);
 
         // Creates the changelog file
         self.serialize(changelog_path)?;

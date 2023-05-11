@@ -3,9 +3,18 @@ name = "sleppa_changelog"
 description = "Produces a CHANGELOG.md file to keep track of releases version and change."
 version = "0.1.0"
 
-keywords = ["Sleppa", "changelog", "semantic-release", "git-commit"]
+keywords = [
+    "Sleppa",
+    "changelog",
+    "semantic-release",
+    "git-commit",
+    "release-automation",
+    "semantic-version",
+    "semver",
+    "release-workflow",
+]
 
-categories = ["development tools"]
+categories = ["Development tools"]
 
 edition.workspace = true
 authors.workspace = true
@@ -27,8 +36,8 @@ time = { version = "^0.3", features = ["formatting"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-tempfile = { version = "^3.5" }
 rstest = { version = "^0.17" }
+tempfile = { version = "^3.5" }
 
 [lib]
 name = "sleppa_changelog"
