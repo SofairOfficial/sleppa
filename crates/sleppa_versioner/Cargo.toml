@@ -1,0 +1,43 @@
+[package]
+name = "sleppa_versioner"
+description = "Produces a new version for a given release type."
+version = "0.1.0"
+
+keywords = [
+    "Sleppa",
+    "semantic-release",
+    "tag",
+    "version",
+    "release-automation",
+    "semantic-version",
+    "semver",
+    "release-workflow",
+]
+
+categories = ["Development tools"]
+
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+# Local dependencies
+sleppa_configuration = { workspace = true }
+
+# External dependencies
+regex = { version = "^1.8" }
+
+# Errors and logs processing
+thiserror = { workspace = true }
+
+[dev-dependencies]
+
+[lib]
+name = "sleppa_versioner"
+crate-type = ["lib"]
+path = "src/lib.rs"

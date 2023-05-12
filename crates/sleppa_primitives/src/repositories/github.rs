@@ -158,11 +158,7 @@ impl GithubRepository {
         // Verifies if the grammar matches the pull request's name
         let captured = match regex.captures(pull_request_name) {
             Some(captured) => captured,
-            None => {
-                return Err(RepositoryError::InvalidMessage(
-                    "Fails to match regex".to_string(),
-                ))
-            }
+            None => return Err(RepositoryError::InvalidMessage("Fails to match regex".to_string())),
         };
 
         // Get the captured group `number` to get the pull request's number
@@ -186,13 +182,9 @@ impl GithubRepository {
     ///
     /// From the pull request's number, its inner commits are retrieved thanks to [octocrab] HTTP API.
     /// The inner commit of a pull request are [RepoCommit] in octocrab.
-    pub async fn get_inner_commits_from_pull_request(
-        &self,
-        pr_number: u64,
-    ) -> RepositoryResult<Vec<RepoCommit>> {
+    pub async fn get_inner_commits_from_pull_request(&self, pr_number: u64) -> RepositoryResult<Vec<RepoCommit>> {
         // Format the route to the repository
-        let repo_address =
-            format! {"/repos/{}/{}/pulls/{}/commits", &self.owner, &self.repo, pr_number};
+        let repo_address = format! {"/repos/{}/{}/pulls/{}/commits", &self.owner, &self.repo, pr_number};
 
         // Retrieve the inner commits with the octocrab HTTP API
         let commits = octocrab::instance().get(repo_address, None::<&()>).await?;
