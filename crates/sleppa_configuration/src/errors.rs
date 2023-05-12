@@ -27,3 +27,7 @@ pub enum ConfigurationError {
 
 /// Definition of the configuration parser result
 pub type ConfigurationResult<T> = std::result::Result<T, ConfigurationError>;
+
+#[cfg(test)]
+/// Result type alias returned by function in unit tests.
+pub type TestResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;

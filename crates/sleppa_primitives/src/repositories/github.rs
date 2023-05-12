@@ -50,7 +50,7 @@ impl Repository for GithubRepository {
     /// Get the reposiroty's last tag and its sha
     ///
     /// If the repository has no tag yet, an empty one is created.
-    /// Else the repository's tag is used to create a new [RepoTag].
+    /// Else the repository's tag is used to create a new [RepositoryTag].
     ///
     /// The octocrab semantic API returns a [octocrab::Page] of [octocrab::Tag].
     async fn get_last_tag(&self) -> RepositoryResult<RepositoryTag> {
@@ -62,14 +62,14 @@ impl Repository for GithubRepository {
             .await?;
 
         if page_tags.items.is_empty() {
-            // Creates an empty [RepoTag] if no tag is found.
+            // Creates an empty [RepositoryTag] if no tag is found.
             let last_tag = RepositoryTag {
                 identifier: "".to_string(),
                 hash: "".to_string(),
             };
             Ok(last_tag)
         } else {
-            // Creates a [RepoTag] with the tag found.
+            // Creates a [RepositoryTag] with the tag found.
             let last_tag = &page_tags.items[0];
             Ok(RepositoryTag {
                 identifier: last_tag.name.to_string(),
@@ -158,7 +158,11 @@ impl GithubRepository {
         // Verifies if the grammar matches the pull request's name
         let captured = match regex.captures(pull_request_name) {
             Some(captured) => captured,
-            None => return Err(RepositoryError::InvalidMessage("Fails to match regex".to_string())),
+            None => {
+                return Err(RepositoryError::InvalidMessage(
+                    "Fails to match regex".to_string(),
+                ))
+            }
         };
 
         // Get the captured group `number` to get the pull request's number
@@ -182,9 +186,13 @@ impl GithubRepository {
     ///
     /// From the pull request's number, its inner commits are retrieved thanks to [octocrab] HTTP API.
     /// The inner commit of a pull request are [RepoCommit] in octocrab.
-    pub async fn get_inner_commits_from_pull_request(&self, pr_number: u64) -> RepositoryResult<Vec<RepoCommit>> {
+    pub async fn get_inner_commits_from_pull_request(
+        &self,
+        pr_number: u64,
+    ) -> RepositoryResult<Vec<RepoCommit>> {
         // Format the route to the repository
-        let repo_address = format! {"/repos/{}/{}/pulls/{}/commits", &self.owner, &self.repo, pr_number};
+        let repo_address =
+            format! {"/repos/{}/{}/pulls/{}/commits", &self.owner, &self.repo, pr_number};
 
         // Retrieve the inner commits with the octocrab HTTP API
         let commits = octocrab::instance().get(repo_address, None::<&()>).await?;

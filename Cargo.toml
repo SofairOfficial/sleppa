@@ -18,6 +18,7 @@ rust-version = "1.69"
 # Local dependencies
 sleppa_configuration = { version = "0.1.0", path = "crates/sleppa_configuration" }
 sleppa_commit_analyzer = { version = "0.1.0", path = "crates/sleppa_commit_analyzer" }
+sleppa_primitives = { version = "0.1.0", path = "crates/sleppa_primitives" }
 
 # Errors processing
 thiserror = { version = "1.0.40" }

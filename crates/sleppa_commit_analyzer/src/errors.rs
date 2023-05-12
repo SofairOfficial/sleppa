@@ -22,3 +22,7 @@ pub enum CommitAnalyzerError {
 
 /// Definition of the commit analyzer result
 pub type CommitAnalyzerResult<R> = Result<R, CommitAnalyzerError>;
+
+#[cfg(test)]
+/// Result type alias returned by function in unit tests.
+pub type TestResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;

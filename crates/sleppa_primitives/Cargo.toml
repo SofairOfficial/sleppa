@@ -1,9 +1,9 @@
 [package]
-name = "sleppa_commit_analyzer"
-description = "Analyzer calculating a semantic release version based on commit messages contents."
+name = "sleppa_primitives"
+description = "Contains the convenient primitives, such as, data structures, macros or reusable source code."
 version = "0.1.0"
 
-keywords = ["Sleppa", "release-automation", "semantic-release", "git-commit"]
+keywords = ["Sleppa", "primitives"]
 
 categories = ["Development tools"]
 
@@ -18,8 +18,7 @@ rust-version.workspace = true
 [dependencies]
 
 # Local dependencies
-sleppa_configuration = { workspace = true }
-sleppa_primitives = { workspace = true }
+
 
 # External dependencies
 async-trait = { version = "^0.1" }
@@ -35,6 +34,6 @@ tokio = { version = "^1.28", default-features = false, features = ["macros"] }
 tokio-test = { version = "^0.4" }
 
 [lib]
-name = "sleppa_commit_analyzer"
+name = "sleppa_primitives"
 crate-type = ["lib"]
 path = "src/lib.rs"
