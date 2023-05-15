@@ -30,6 +30,7 @@ mod errors;
 
 use constants::CHANGELOG_DEFAULT_PATH;
 use errors::{ChangelogError, ChangelogResult};
+use sleppa_primitives::Commit;
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
@@ -53,17 +54,6 @@ pub struct ChangelogPlugin {
     pub new_tag: String,
     /// The repository's URL like `https://github.com/USER/REPO`
     pub repo_url: String,
-}
-
-/// Defines Commit and its fields used for the changelog
-#[derive(Debug, Clone, PartialEq)]
-pub struct Commit {
-    /// long commit identifier (i.e. 40 digits long SHA-1 hash)
-    pub hash: String,
-    /// The commit message like: `feat(github): a new feature`
-    pub message: String,
-    /// Commit message type value, e.g. `feat`, `break`, `refac`, etc.
-    pub commit_type: String,
 }
 
 impl ChangelogPlugin {
