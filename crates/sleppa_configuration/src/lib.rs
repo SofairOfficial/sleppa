@@ -22,14 +22,25 @@
 //! The trait [ReleaseRuleHandler] handles the release rule and verifies if a commit message
 //! matches a grammar.
 
-mod error;
+mod errors;
 
-use error::{ConfigurationError, ConfigurationResult};
+use errors::{ConfigurationError, ConfigurationResult};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+
+/// Configuration data structure
+///
+/// This structure will be used to deserialize the toml into this Rust usable type.
+///
+/// The `release_rules` hashmap contains 3 keys : `major`, `minor` and `patch`.
+/// For every key a [ReleaseRule] is associated.
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Configuration {
+    pub release_rules: ReleaseRules,
+}
 
 /// Enumerates available release actions.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Eq, Hash)]
@@ -44,54 +55,50 @@ pub enum ReleaseAction {
 }
 
 /// Enumerates available format for a release rule.
+///
+/// Two format are available : Regex and PEG.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ReleaseRuleFormat {
-    /// Grammar of the release rule is defined as a regular expression
+    /// Grammar of the release rule is defined as a [regular expression](https://en.wikipedia.org/wiki/Regular_expression)
     Regex,
-    /// Grammar of the release rule is defined using parsing expression grammar (PEG)
+    /// Grammar of the release rule is defined using parsing expression grammar [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar)
     Peg,
 }
 
-/// Type alias used for typing release rule
-pub type ReleaseRules = HashMap<ReleaseAction, ReleaseRule>;
-
-/// Configuration data structure
-///
-/// This structure will be used to deserialize the toml into this Rust usable type.
-///
-/// The `release_rules` hashmap contains 3 keys : `major`, `minor` and `patch`.
-/// For every key a [ReleaseRule] is associated.
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct Configuration {
-    pub release_rules: ReleaseRules,
-}
-
-/// Implementation of the `new` method : `Configuration::new()`
-impl Configuration {
-    pub fn new() -> Self {
-        Configuration::default()
-    }
-}
-
 /// Release rule ressource
+///
+/// A ReleaseRule is defined by its format as a [ReleaseRuleFormat] and its associated
+/// grammar as a [String].
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReleaseRule {
-    /// The format is `Regex` or `Peg`
+    /// The format is a [ReleaseRuleFormat] : `Regex` or `Peg`
     pub format: ReleaseRuleFormat,
     /// Expression used to analyze the commit message
     pub grammar: String,
 }
 
+/// Type alias used for typing release rule
+pub type ReleaseRules = HashMap<ReleaseAction, ReleaseRule>;
+
+/// A handler to match the commit message to a release rule grammar.
 pub trait ReleaseRuleHandler {
+    /// Verifies if a commit message matches a [ReleaseRule] grammar.
+    fn handle(&self, message: &str) -> ConfigurationResult<()>;
+}
+
+impl Configuration {
+    /// Implementation of the `new` method : `Configuration::new()`
+    pub fn new() -> Self {
+        Configuration::default()
+    }
+}
+
+impl ReleaseRuleHandler for ReleaseRule {
     /// Verifies if a commit message matches a release rule grammar.
     ///
     /// The given commit message is parsed using the release rule's grammar and
     /// in case it matches, an Ok(()) is returned.
-    fn handle(&self, message: &str) -> ConfigurationResult<()>;
-}
-
-impl ReleaseRuleHandler for ReleaseRule {
     fn handle(&self, message: &str) -> ConfigurationResult<()> {
         match &self.format {
             ReleaseRuleFormat::Regex => {

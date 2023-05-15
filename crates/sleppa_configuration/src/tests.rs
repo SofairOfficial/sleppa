@@ -2,7 +2,7 @@
 //!
 //! This testing module implements the unit tests for testing the configuration processing routines.
 
-use super::*;
+use super::{errors::*, *};
 use std::fs::File;
 use std::io::Write;
 use tempfile::tempdir;
@@ -207,6 +207,3 @@ fn test_can_trait_implementation_regex() {
     assert!(release_rule_def.handle(msg4).is_err());
     assert!(release_rule_def.handle(msg5).is_err());
 }
-
-/// Unit test result type
-pub type TestResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
