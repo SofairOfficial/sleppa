@@ -31,9 +31,7 @@ impl CodeArchiverPlugin {
         let token = std::env::var("GITHUB_TOKEN")?;
 
         // Build an octocrab instance with the provided credentials.
-        let octocrab = octocrab::Octocrab::builder()
-            .personal_token(token)
-            .build()?;
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
 
         // Publishes the release for the given tag.
         octocrab
