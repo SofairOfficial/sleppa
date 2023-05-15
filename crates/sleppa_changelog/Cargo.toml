@@ -1,0 +1,46 @@
+[package]
+name = "sleppa_changelog"
+description = "Produces a CHANGELOG.md file to keep track of releases version and change."
+version = "0.1.0"
+
+keywords = [
+    "Sleppa",
+    "changelog",
+    "semantic-release",
+    "git-commit",
+    "release-automation",
+    "semantic-version",
+    "semver",
+    "release-workflow",
+]
+
+categories = ["Development tools"]
+
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+# Local dependencies
+sleppa_configuration = { workspace = true }
+sleppa_primitives = { workspace = true }
+
+# External dependencies
+time = { version = "^0.3", features = ["formatting"] }
+
+# Errors and logs processing
+thiserror = { workspace = true }
+
+[dev-dependencies]
+rstest = { version = "^0.17" }
+tempfile = { version = "^3.5" }
+
+[lib]
+name = "sleppa_changelog"
+crate-type = ["lib"]
+path = "src/lib.rs"
