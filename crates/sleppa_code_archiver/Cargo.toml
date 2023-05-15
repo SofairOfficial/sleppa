@@ -1,9 +1,20 @@
 [package]
-name = "sleppa_commit_analyzer"
-description = "Analyzer calculating a semantic release version based on commit messages contents."
+name = "sleppa_code_archiver"
+description = "Produces a release on github with archived srouce code."
 version = "0.1.0"
 
-keywords = ["Sleppa", "release-automation", "semantic-release", "git-commit"]
+keywords = [
+    "Sleppa",
+    "release",
+    "semantic-release",
+    "github",
+    "code-archiver",
+    "archive",
+    "release-automation",
+    "semantic-version",
+    "semver",
+    "release-workflow",
+]
 
 categories = ["Development tools"]
 
@@ -18,22 +29,17 @@ rust-version.workspace = true
 [dependencies]
 
 # Local dependencies
-sleppa_configuration = { workspace = true }
 sleppa_primitives = { workspace = true }
 
 # External dependencies
-async-trait = { version = "^0.1" }
 octocrab = { version = "^0.20" }
-regex = { version = "^1.8" }
-serde = { version = "^1.0", features = ["derive"] }
 
 # Errors and logs processing
 thiserror = { workspace = true }
 
 [dev-dependencies]
 
-
 [lib]
-name = "sleppa_commit_analyzer"
+name = "sleppa_code_archiver"
 crate-type = ["lib"]
 path = "src/lib.rs"

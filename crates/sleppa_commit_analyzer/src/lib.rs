@@ -9,17 +9,18 @@
 //! - Major > Minor > Patch
 
 mod errors;
-mod repositories;
 
 use errors::*;
 use sleppa_configuration::*;
 
+/// Defines the commit analyzer plugin
 ///
-///
+/// This plugins aims at analyzing given commits messages to determine the [ReleaseAction] type to
+/// apply.
 #[derive(Debug, Default)]
-pub struct CommitAnalyzer;
+pub struct CommitAnalyzerPlugin;
 
-impl CommitAnalyzer {
+impl CommitAnalyzerPlugin {
     /// Verifies multiple commit messages to retrieve the higher release action type to apply.
     ///
     /// This function receives a list of commit messages, as a vector of [String]s, and analyzes them

@@ -1,18 +1,20 @@
 [package]
-name = "sleppa_configuration"
-description = "Configuration management"
+name = "sleppa_versioner"
+description = "Produces a new version for a given release type."
 version = "0.1.0"
 
 keywords = [
     "Sleppa",
-    "release-automation",
     "semantic-release",
-    "configuration",
-    "parser",
-    "toml",
+    "tag",
+    "version",
+    "release-automation",
+    "semantic-version",
+    "semver",
+    "release-workflow",
 ]
 
-categories = ["Configuration"]
+categories = ["Development tools"]
 
 edition.workspace = true
 authors.workspace = true
@@ -24,16 +26,18 @@ rust-version.workspace = true
 
 [dependencies]
 
+# Local dependencies
+sleppa_configuration = { workspace = true }
+
 # External dependencies
 regex = { version = "^1.8" }
-serde = { version = "^1.0", features = ["derive"] }
-tempfile = { version = "^3.5" }
-toml = { version = "^0.7" }
 
 # Errors and logs processing
 thiserror = { workspace = true }
 
+[dev-dependencies]
+
 [lib]
-name = "sleppa_configuration"
+name = "sleppa_versioner"
 crate-type = ["lib"]
 path = "src/lib.rs"

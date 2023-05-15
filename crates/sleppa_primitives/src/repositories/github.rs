@@ -50,7 +50,7 @@ impl Repository for GithubRepository {
     /// Get the reposiroty's last tag and its sha
     ///
     /// If the repository has no tag yet, an empty one is created.
-    /// Else the repository's tag is used to create a new [RepoTag].
+    /// Else the repository's tag is used to create a new [RepositoryTag].
     ///
     /// The octocrab semantic API returns a [octocrab::Page] of [octocrab::Tag].
     async fn get_last_tag(&self) -> RepositoryResult<RepositoryTag> {
@@ -62,14 +62,14 @@ impl Repository for GithubRepository {
             .await?;
 
         if page_tags.items.is_empty() {
-            // Creates an empty [RepoTag] if no tag is found.
+            // Creates an empty [RepositoryTag] if no tag is found.
             let last_tag = RepositoryTag {
                 identifier: "".to_string(),
                 hash: "".to_string(),
             };
             Ok(last_tag)
         } else {
-            // Creates a [RepoTag] with the tag found.
+            // Creates a [RepositoryTag] with the tag found.
             let last_tag = &page_tags.items[0];
             Ok(RepositoryTag {
                 identifier: last_tag.name.to_string(),
