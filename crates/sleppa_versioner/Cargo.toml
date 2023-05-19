@@ -27,7 +27,7 @@ rust-version.workspace = true
 [dependencies]
 
 # Local dependencies
-sleppa_configuration = { workspace = true }
+sleppa_primitives = { workspace = true }
 
 # External dependencies
 regex = { version = "^1.8" }

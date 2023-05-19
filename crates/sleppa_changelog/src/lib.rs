@@ -13,13 +13,13 @@
 //!```toml
 //! ### [v4.0.0](https://github.com/user/repo/compare/v3.2.1..v4.0.0) (2023-05-05)
 //!
-//! * **break**
-//!  * new breaking ([1ebdf43e](https://github.com/user/repo/commit/1ebdf43e8950d8f9dace2e554be5d387267575ef))
-//! * **feat**
-//!  * new feature ([172cd158](https://github.com/user/repo/commit/172cd1589d0a29b56cd8261a888911201305b04d))
-//!  * a feature ([987cd158](https://github.com/user/repo/commit/8987cd1589d0a29b56cd8261a888911201305b04d))
-//! * **patch**
-//!  * new patch ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))
+//! * **Major changes**
+//!  * break: new breaking ([1ebdf43e](https://github.com/user/repo/commit/1ebdf43e8950d8f9dace2e554be5d387267575ef))
+//! * **Minor changes**
+//!  * feat: new feature ([172cd158](https://github.com/user/repo/commit/172cd1589d0a29b56cd8261a888911201305b04d))
+//!  * refac: refac a feature ([987cd158](https://github.com/user/repo/commit/8987cd1589d0a29b56cd8261a888911201305b04d))
+//! * **Patch changes**
+//!  * style: style change ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))
 //!```
 //!
 //! While the file is written, it has to be automatically commited to the reposiroty with a message : `Release v4.0.0`
@@ -30,7 +30,8 @@ mod errors;
 
 use constants::CHANGELOG_DEFAULT_PATH;
 use errors::{ChangelogError, ChangelogResult};
-use sleppa_primitives::Commit;
+use sleppa_primitives::repositories::RepositoryUser;
+use sleppa_primitives::{Commit, Configurable, Context, ReleaseAction};
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
@@ -45,9 +46,9 @@ use time::{format_description, OffsetDateTime};
 /// The URL is used to write hlink in the changelog file, therefore using a String here is sufficient.
 #[derive(Default)]
 pub struct ChangelogPlugin {
-    /// Sections are represented by the commit's type (the keys) associated with their [Commit]s (the value).
+    /// Sections are represented by the three [ReleaseAction] type (the keys) associated with their [Commit]s (the value).
     /// As the order of the key is important, a [BTreeMap] is needed here.
-    pub sections: BTreeMap<String, Vec<Commit>>,
+    pub sections: BTreeMap<ReleaseAction, Vec<Commit>>,
     /// The reposiroty's previous tag
     pub last_tag: String,
     /// The repository's new tag
@@ -56,10 +57,50 @@ pub struct ChangelogPlugin {
     pub repo_url: String,
 }
 
+impl Configurable<Vec<String>, RepositoryUser> for ChangelogPlugin {
+    /// Loads an approved user to commit the changelog.
+    ///
+    /// A [RepositoryUser] is created with the given provided data. These datas are in a vector of string where the
+    /// first element is the name, the second the email and the third the credentials, e.g. "GITHUB_TOKEN"
+    fn load(&self, input: Vec<String>) -> RepositoryUser {
+        RepositoryUser::new(input[0].to_string(), input[1].to_string(), input[2].to_string())
+    }
+}
+
 impl ChangelogPlugin {
     /// Implementation of the `new` method : `ChangelogPlugin::new()`.
     pub fn new() -> Self {
         ChangelogPlugin::default()
+    }
+
+    /// Executes the main function of the changelog generator plugin
+    ///
+    /// This function builds the [ChangelogPlugin] from a vector of [Commit]s and writes the file to a
+    /// provided path.
+    /// The file is written using the commits messages as source of information. The changelog groups the
+    /// commits using their [ReleaseAction] type.
+    ///
+    /// The `repo_url` argument is used to write the file html link. Whereas the `changelog_path` is the path where to
+    /// write the CHANGELOG.md file.
+    pub fn run(
+        &mut self,
+        _context: &Context,
+        changelog_path: &Path,
+        repo_url: &str,
+        commits: Vec<Commit>,
+        last_tag: &str,
+        new_tag: &str,
+        user: RepositoryUser,
+    ) -> ChangelogResult<()> {
+        // Builds the [ChangelogPlugin] from commits, last tag and new tag
+        self.with_commits(commits, last_tag, new_tag, repo_url);
+
+        // Creates the changelog file at the given path
+        self.serialize(changelog_path)?;
+
+        // Commits the changelog file to the repository
+        self.commit_changelog(user)?;
+        Ok(())
     }
 
     /// Builds a new changelog plugin instance based on a given list of verified commits.
@@ -67,26 +108,30 @@ impl ChangelogPlugin {
     /// Maps the commit types (the key) to a vector of commit messages (the value) for the sections
     /// field of a [ChangelogPlugin]. Therefore, the key contains a vector of commit messages with
     /// the same type, e.g. :
-    /// BTreeMap<["break", ["break: breaking change", "break(github): a change"]],
-    ///          ["feat", ["feat: some feature", "feat(github): another feature"]],
-    ///          ["refac", ["refac: add comments"]]>
+    /// BTreeMap<[ReleaseAction::Major, ["break: breaking change", "break(github): a change"]],
+    ///          [ReleaseAction::Minor, ["feat: some feature", "feat(github): another feature"]],
+    ///          [ReleaseAction::Patch, ["refac: add comments"]]>
     fn with_commits(&mut self, commits: Vec<Commit>, last_tag: &str, new_tag: &str, repo_url: &str) -> &Self {
         self.last_tag = last_tag.into();
         self.new_tag = new_tag.into();
         self.repo_url = repo_url.into();
-        for commit in &commits {
-            if self.sections.contains_key(&commit.commit_type) {
-                // If the key exists, append the commit to the value.
-                let mut existing_value = self.sections[&commit.commit_type].clone();
-                existing_value.push(commit.clone());
+        let mut commits_major: Vec<Commit> = vec![];
+        let mut commits_minor: Vec<Commit> = vec![];
+        let mut commits_patch: Vec<Commit> = vec![];
 
-                self.sections.insert(commit.commit_type.to_string(), existing_value);
-            } else {
-                // If the key doesn't exists, creates it and adds the commit to the value.
-                self.sections
-                    .insert(commit.commit_type.to_string(), vec![commit.clone()]);
+        for commit in &commits {
+            match commit.release_action {
+                Some(ReleaseAction::Major) => commits_major.push(commit.clone()),
+                Some(ReleaseAction::Minor) => commits_minor.push(commit.clone()),
+                Some(ReleaseAction::Patch) => commits_patch.push(commit.clone()),
+                None => continue,
             }
         }
+
+        self.sections.insert(ReleaseAction::Major, commits_major);
+        self.sections.insert(ReleaseAction::Minor, commits_minor);
+        self.sections.insert(ReleaseAction::Patch, commits_patch);
+
         self
     }
 
@@ -135,8 +180,12 @@ impl ChangelogPlugin {
         writeln!(&mut file, "{version_text} ({date})\n",)?;
 
         // Loops over [ChangelogPlugin]'s sections field to write the file
-        for (commit_type, commits) in &self.sections {
-            writeln!(&mut file, "* **{commit_type}**")?;
+        for (release_action, commits) in &self.sections {
+            match release_action {
+                ReleaseAction::Major => writeln!(&mut file, "* **Major changes**")?,
+                ReleaseAction::Minor => writeln!(&mut file, "* **Minor changes**")?,
+                ReleaseAction::Patch => writeln!(&mut file, "* **Patch changes**")?,
+            }
 
             for commit in commits {
                 let hash = &commit.hash;
@@ -157,11 +206,10 @@ impl ChangelogPlugin {
     ///
     /// This function commits the file to the repository with the provided path.
     /// The commit message is like `Release v3.2.1`.
-    fn commit_changelog(&self) -> ChangelogResult<()> {
-        let commit_user = r#"git user.name="Sofair Maintainers""#.to_string();
-        let commit_user_email = r#"git user.mail="maintainers@sofair.io""#.to_string();
-        // To do : the credentials will be provided by the context
-        let commit_user_signingkey = r#"user.signingkey="""#.to_string();
+    fn commit_changelog(&self, user: RepositoryUser) -> ChangelogResult<()> {
+        let commit_user = format!(r#"git user.name="{}""#, user.name);
+        let commit_user_email = format!(r#"git user.mail="{}""#, user.email);
+        let commit_user_signingkey = format!(r#"user.signingkey="{}""#, user.signing_key);
         let commit_message = format!(r#"git commit -m "Release {}""#, &self.new_tag);
 
         match Command::new("/bin/sh")
@@ -176,31 +224,6 @@ impl ChangelogPlugin {
             Ok(_) => Ok(()),
             Err(err) => Err(ChangelogError::IoError(err)),
         }
-    }
-
-    /// Executes the main function of the changelog generator plugin
-    ///
-    /// This function builds the [ChangelogPlugin] from a vector of [Commit]s and writes the file to a
-    /// provided path.
-    /// The file is written using the commits messages as source of information. The changelog groups the
-    /// commits using their type.
-    pub fn run(
-        &mut self,
-        changelog_path: &Path,
-        repo_url: &str,
-        commits: Vec<Commit>,
-        last_tag: &str,
-        new_tag: &str,
-    ) -> ChangelogResult<()> {
-        // Builds the [ChangelogPlugin] from commits, last tag and new tag
-        self.with_commits(commits, last_tag, new_tag, repo_url);
-
-        // Creates the changelog file
-        self.serialize(changelog_path)?;
-
-        // Commits the changelog file to the repository
-        self.commit_changelog()?;
-        Ok(())
     }
 }
 

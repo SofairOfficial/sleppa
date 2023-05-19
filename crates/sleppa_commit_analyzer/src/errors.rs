@@ -1,4 +1,3 @@
-use octocrab::GitHubError;
 use serde::Deserialize;
 
 /// Error enumeration for the commit message analyzer parser module.
@@ -14,10 +13,6 @@ pub enum CommitAnalyzerError {
     /// Message is not correct
     #[error("No release action found")]
     InvalidMessage(),
-
-    /// Chained errors occuring in GitHub API
-    #[error(transparent)]
-    GithubError(#[from] GitHubError),
 }
 
 /// Definition of the commit analyzer result

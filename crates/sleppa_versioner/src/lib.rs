@@ -12,7 +12,7 @@ mod errors;
 
 use errors::{VersionerError, VersionerResult};
 use regex::Regex;
-use sleppa_configuration::ReleaseAction;
+use sleppa_primitives::ReleaseAction;
 
 pub struct VersionerPlugin {
     pub release_action: ReleaseAction,
@@ -82,6 +82,13 @@ impl TryFrom<&str> for Tag {
     }
 }
 
+impl Into<String> for Tag {
+    /// Implements the parsing from [Tag] to [String]
+    fn into(self) -> String {
+        format!("v{}.{}.{}", self.major, self.minor, self.patch)
+    }
+}
+
 impl std::fmt::Display for Tag {
     /// Prints the correct format for Tag e.g. "v3.2.1".
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -97,7 +104,7 @@ impl Tag {
     ///  - 1 to the first digit and set 0 to others for major, e.g. from `3.2.1` -> `4.0.0`,
     ///  - 1 to the second and set 0 to the third for minor, e.g. from `3.2.1` -> `3.3.0`,
     ///  - 1 to the third for patch, e.g. from `3.2.1` -> `3.2.2`.
-    pub fn increment(&self, release_action: &ReleaseAction) -> Self {
+    fn increment(&self, release_action: &ReleaseAction) -> Self {
         let mut tag = Tag {
             major: self.major,
             minor: self.minor,

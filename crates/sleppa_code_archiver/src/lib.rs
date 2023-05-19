@@ -8,7 +8,10 @@
 mod errors;
 
 use errors::CodeArchiverResult;
-use sleppa_primitives::repositories::{github::GithubRepository, *};
+use sleppa_primitives::{
+    repositories::{github::GithubRepository, *},
+    Configurable, Context,
+};
 
 /// Defines the code archiver plugin and its fields
 ///
@@ -21,15 +24,22 @@ pub struct CodeArchiverPlugin {
     pub repository: GithubRepository,
 }
 
+impl Configurable<String, CodeArchiverResult<String>> for CodeArchiverPlugin {
+    /// Loads the credentials to publish the release.
+    ///
+    /// For GitHub it could be input = "GITHUB_TOKEN".
+    fn load(&self, input: String) -> CodeArchiverResult<String> {
+        let token = std::env::var(input)?;
+        Ok(token)
+    }
+}
+
 impl CodeArchiverPlugin {
     /// Publishes a release into the GitHub repository
     ///
     /// The release is published for a given [RepositoryTag] into a [GithubRepository].
     /// The credentials are mandatory to publish a release.
-    pub async fn run(&self) -> CodeArchiverResult<()> {
-        // Constructs the credentials
-        let token = std::env::var("GITHUB_TOKEN")?;
-
+    pub async fn run(&self, _context: &Context, token: String) -> CodeArchiverResult<()> {
         // Build an octocrab instance with the provided credentials.
         let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
 

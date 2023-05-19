@@ -1,19 +1,21 @@
 # Sleppa
 
 This project aims to provide a semantic-release for Rust written project in a Rust written way.
-A configuration file is mandatory and is named `sleppa.toml`.
 
 Original [semantic-release](https://github.com/semantic-release/semantic-release/discussions) is a very powerful tool to operate semantic release. It automates the whole package release workflow including: determining the next version number, generating the release notes, and publishing the package.
 
-As we are using squash-and-merge strategy to keep a clean and lean history, we have to develop a way to read the message of squashed commits.
-Our strategy is as follows :
-
-- Creating a new branch to operate change. The branch name will be the message of the squashed commits.
-- Do some commits on this branch (named inner commit) with valid conventionnal commit message.
-- Create a pull request (PR) with a valid name like: `Issue to solve (#3)` where the number `3` is the number of the PR.
-- Squash-and-merge the PR with the valid name.
-
 ## How it works
+
+The module `repositories` of the `sleppa_primitives` analyzes a given repository to retriveve the `commits` since the last tag. GitHub reposiroties are now supported but others git file system could be added thanks to the trait `Reposiroty`.
+
+These `commits` are given to the `sleppa_commit_analyzer` which will analyze their message. In order to proceed, a configuration file that defines the release rules is loaded.
+The crate determines the new release action type to apply.
+
+The crate `sleppa_versioner` uses this new release action type to determine the new tag of the repository.
+
+Hence the crate `sleppa_changelog` uses all these informations to write the new changelog and to commit the file into the reposiroty. To commit the file, credentials must be loaded however.
+
+### Release action definition
 
 The following table describes each `<type>` of commit and how the latter impacts (i.e. increments) the `MAJOR`, `MINOR` and/or `PATCH` digits of a [semantic version](https://semver.org).
 
@@ -32,10 +34,6 @@ The following table describes each `<type>` of commit and how the latter impacts
 | **test**  | _Development_   | Changes related to tests (i.e. refactoring or adding tests)                                      | `PATCH`    | `test(service): implement property-based tests on financial algorithms`        |
 
 These types and versionning are the default implementation of `Sleppa`.
-
-### View of a squashed PR with inner commits
-
-![Alt text](https://user-images.githubusercontent.com/15166875/229083489-82a73e59-7f64-468a-88f7-8714d0630e37.png "squashed commit")
 
 ## Licenses and copyright
 

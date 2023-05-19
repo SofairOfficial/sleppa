@@ -29,6 +29,21 @@ fn test_can_try_into() -> TestResult<()> {
     Ok(())
 }
 
+// Tests the parsing from Tag to String
+#[test]
+fn test_can_into_string() {
+    // Unit test preparation
+    let tag = Tag {
+        major: 3,
+        minor: 2,
+        patch: 1,
+    };
+
+    let tag_string: String = tag.into();
+
+    assert_eq!(tag_string, "v3.2.1");
+}
+
 // Tests a Tag's incrementation from a release action type
 #[test]
 fn test_can_increment() {

@@ -18,7 +18,7 @@ rust-version.workspace = true
 [dependencies]
 
 # Local dependencies
-
+sleppa_configuration = { workspace = true }
 
 # External dependencies
 async-trait = { version = "^0.1" }

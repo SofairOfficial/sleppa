@@ -21,6 +21,7 @@
 //! Once the pull request has been merged to a branch, it is available as a [RepoCommit] with its own properties like
 //! message and hash.
 
+use crate::Commit;
 use async_trait::async_trait;
 use octocrab::models::repos::RepoCommit;
 use regex::Regex;
@@ -80,11 +81,11 @@ impl Repository for GithubRepository {
 
     /// Get inner commit messages since the last tag
     ///
-    /// From a repository's name and owner, all the inner commits' messages since the last tag are retrieved.
+    /// From a repository's name and owner, all the inner commits since the last tag are retrieved.
     /// If no tag is found, all the [RepoCommit] are analyzed.
     /// If the name of the pull request is malformed, it is then ignored.
-    async fn get_inner_commits(&self) -> RepositoryResult<Vec<String>> {
-        let mut inner_commits_messages: Vec<String> = vec![];
+    async fn get_inner_commits(&self) -> RepositoryResult<Vec<Commit>> {
+        let mut commits: Vec<Commit> = vec![];
 
         // Get the repository's tag.
         let tag = self.get_last_tag().await?;
@@ -105,10 +106,10 @@ impl Repository for GithubRepository {
 
             // Pushes inner commit messages to the result array
             for commit in inner_commits {
-                inner_commits_messages.push(commit.commit.message.to_string());
+                commits.push(Commit::new(commit.commit.message.to_string(), commit.sha.to_string()));
             }
         }
-        Ok(inner_commits_messages)
+        Ok(commits)
     }
 }
 

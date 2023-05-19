@@ -1,7 +1,7 @@
 //! Unit tests
 //!
 //! This testing module implements the unit tests for testing the repositories module routines.
-use super::*;
+use super::{errors::TestResult, github::GithubRepository, *};
 
 // Tests to retrieve a pull request number's from it's name.
 #[test]
@@ -25,9 +25,7 @@ fn test_can_get_pull_request_number_from_its_name() {
     );
     // Asserts an error occurs
     assert!(GithubRepository::get_pull_request_number_from_its_name(incorrect_space).is_err());
-    assert!(
-        GithubRepository::get_pull_request_number_from_its_name(incorrect_no_parenthesis).is_err()
-    );
+    assert!(GithubRepository::get_pull_request_number_from_its_name(incorrect_no_parenthesis).is_err());
     assert!(GithubRepository::get_pull_request_number_from_its_name(incorrect_no_hashtag).is_err());
 }
 
@@ -38,6 +36,7 @@ fn test_can_get_pull_request_number_from_its_name() {
 // repository has been created.
 // The tag of this repo is "v1.0.0" and its associated hash : "cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a"
 #[tokio::test]
+#[ignore = "test done in test_can_get_inner_commits"]
 async fn test_can_get_last_tag() -> TestResult<()> {
     // Unit test preparation
     // Providing the credentials for the test repository.
@@ -68,6 +67,7 @@ async fn test_can_get_last_tag() -> TestResult<()> {
 //
 // As the `Issue-to-solve-1 (#1)` is linked to the last tag, it will be ignored.
 #[tokio::test]
+#[ignore = "test done in test_can_get_inner_commits"]
 async fn test_can_get_pull_request() -> TestResult<()> {
     // Unit test preparation
     // Providing the credentials for the test repository.
@@ -95,6 +95,7 @@ async fn test_can_get_pull_request() -> TestResult<()> {
 // The last valid pull request number comes from the name "Issue-to-solve-2 (#2)", hence the pull request's number to
 // analyze is `2`.
 #[tokio::test]
+#[ignore = "test done in test_can_get_inner_commits"]
 async fn test_can_get_inner_commits_from_pull_request() -> TestResult<()> {
     // Unit test preparation
     // Providing the credentials for the test repository.
@@ -124,7 +125,7 @@ async fn test_can_get_inner_commits_from_pull_request() -> TestResult<()> {
 // the http request is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
 // repository has been created.
 #[tokio::test]
-async fn test_can_get_inner_commits_messages() -> TestResult<()> {
+async fn test_can_get_inner_commits() -> TestResult<()> {
     let githubrepository = GithubRepository {
         repo: "semantic-release-squash-and-merge-testbed".to_string(),
         owner: "SofairOfficial".to_string(),
@@ -133,10 +134,14 @@ async fn test_can_get_inner_commits_messages() -> TestResult<()> {
     // Execution step
     let response = githubrepository.get_inner_commits().await?;
 
-    // Asserts the name of retrived pull request are corrects.
-    assert_eq!(response[0], "patch:some patch");
-    assert_eq!(response[1], "feat(script): add a script");
-    assert_eq!(response[2], "feat: add a feature");
+    // Asserts the name of retrieved pull request are corrects.
+    assert_eq!(response[0].message, "patch:some patch");
+    assert_eq!(response[1].message, "feat(script): add a script");
+    assert_eq!(response[2].message, "feat: add a feature");
+
+    assert_eq!(response[0].hash, "76c8e718b043764de6201aabfe05c0e9ee0cf3a2");
+    assert_eq!(response[1].hash, "912dcb7b5ab87570ca3df3b7c465ac8a3505cc04");
+    assert_eq!(response[2].hash, "f474fce23d7fd18395681949e5c16194b0400297");
 
     Ok(())
 }
