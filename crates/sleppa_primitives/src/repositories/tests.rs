@@ -1,7 +1,8 @@
 //! Unit tests
 //!
 //! This testing module implements the unit tests for testing the repositories module routines.
-use super::{errors::TestResult, github::GithubRepository, *};
+
+use crate::repositories::{errors::TestResult, github::GithubRepository, *};
 
 // Tests to retrieve a pull request number's from it's name.
 #[test]
@@ -125,6 +126,7 @@ async fn test_can_get_inner_commits_from_pull_request() -> TestResult<()> {
 // the http request is automatically sent to GitHub. Therefore a [semantic release testbed](https://github.com/SofairOfficial/semantic-release-squash-and-merge-testbed)
 // repository has been created.
 #[tokio::test]
+#[ignore = "time consuming test"]
 async fn test_can_get_inner_commits() -> TestResult<()> {
     let githubrepository = GithubRepository {
         repo: "semantic-release-squash-and-merge-testbed".to_string(),

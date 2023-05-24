@@ -1,0 +1,10 @@
+# Sleppa_commit_analyzer default configuration file
+#
+# This configuration file defines the release rules according to release action types.
+# Each release type could be defined independantly.
+# This file must contain the 3 types : `major`, `minor` and `patch` and th rules associated.
+
+[release_rules]
+major = { format = "regex", grammar = '^(?P<type>break){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }
+minor = { format = "regex", grammar = '^(?P<type>build|ci|docs|feat){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }
+patch = { format = "regex", grammar = '^(?P<type>fix|perf|refac|sec|style|test){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }

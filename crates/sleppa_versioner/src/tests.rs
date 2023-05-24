@@ -1,7 +1,8 @@
 //! Unit tests
 //!
 //! This testing module implements the unit tests for versioning.
-use super::{errors::*, *};
+
+use crate::{errors::TestResult, *};
 
 // Tests the conversion of a string tag into a [Tag] structure
 #[test]
@@ -39,7 +40,7 @@ fn test_can_into_string() {
         patch: 1,
     };
 
-    let tag_string: String = tag.into();
+    let tag_string: String = tag.into_string();
 
     assert_eq!(tag_string, "v3.2.1");
 }

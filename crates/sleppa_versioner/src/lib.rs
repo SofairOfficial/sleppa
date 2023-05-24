@@ -12,7 +12,13 @@ mod errors;
 
 use errors::{VersionerError, VersionerResult};
 use regex::Regex;
-use sleppa_primitives::ReleaseAction;
+use sleppa_configuration::{
+    constants::{CONFIGURATION_KEY, CONFIGURATION_LAST_TAG, CONFIGURATION_USER},
+    Context,
+};
+use sleppa_primitives::{repositories::RepositoryUser, ReleaseAction};
+
+use std::process::Command;
 
 pub struct VersionerPlugin {
     pub release_action: ReleaseAction,
@@ -35,8 +41,58 @@ impl VersionerPlugin {
     /// Calculates the new Tag for a given release action
     ///
     /// This function takes an existing [Tag] and calculates the new tag for a given [ReleaseAction].
-    pub fn run(&self, tag: Tag) -> Tag {
-        tag.increment(&self.release_action)
+    pub fn run(&self, context: &Context) -> VersionerResult<Tag> {
+        let last_tag = match context.configurations[&CONFIGURATION_KEY.to_string()].map
+            [&CONFIGURATION_LAST_TAG.to_string()]
+            .as_tag()
+        {
+            Some(value) => value,
+            None => return Err(VersionerError::InvalidContext("missing last tag".to_string())),
+        };
+
+        let user = match context.configurations[&CONFIGURATION_KEY.to_string()].map[&CONFIGURATION_USER.to_string()]
+            .as_user()
+        {
+            Some(value) => value,
+            None => return Err(VersionerError::InvalidContext("missing last tag".to_string())),
+        };
+
+        let tag = Tag::try_from(last_tag.identifier.as_str())?;
+
+        let new_tag = tag.increment(&self.release_action);
+        self.commit_tag(&user, &new_tag)?;
+
+        Ok(new_tag)
+    }
+
+    /// Commits the new changelog file and the new tag
+    ///
+    /// This function commits the file to the repository with the provided path.
+    /// The commit message is like `Release v3.2.1`.
+    fn commit_tag(&self, user: &RepositoryUser, tag: &Tag) -> VersionerResult<()> {
+        let commit_user = format!(r#"git config user.name "{}""#, user.name);
+        let commit_user_email = format!(r#"git config user.email "{}""#, user.email);
+        let commit_tag = format!(r#"git tag {}"#, tag);
+
+        Command::new("sh").arg("-c").arg(commit_user).status().expect("failed");
+
+        Command::new("sh")
+            .arg("-c")
+            .arg(commit_user_email)
+            .status()
+            .expect("failed");
+
+        Command::new("sh")
+            .args(["-c", commit_tag.as_str()])
+            .status()
+            .expect("failed");
+
+        Command::new("sh")
+            .args(["-c", "git push --tags"])
+            .status()
+            .expect("failed");
+
+        Ok(())
     }
 }
 
@@ -82,13 +138,6 @@ impl TryFrom<&str> for Tag {
     }
 }
 
-impl Into<String> for Tag {
-    /// Implements the parsing from [Tag] to [String]
-    fn into(self) -> String {
-        format!("v{}.{}.{}", self.major, self.minor, self.patch)
-    }
-}
-
 impl std::fmt::Display for Tag {
     /// Prints the correct format for Tag e.g. "v3.2.1".
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -97,6 +146,11 @@ impl std::fmt::Display for Tag {
 }
 
 impl Tag {
+    /// Implements the parsing from [Tag] to [String]
+    pub fn into_string(self) -> String {
+        format!("v{}.{}.{}", self.major, self.minor, self.patch)
+    }
+
     /// Increments the tag according to the release action
     ///
     /// A [Tag] is composed of 3 digits, e.g. `v3.2.1`. According to a [ReleaseAction], these digits

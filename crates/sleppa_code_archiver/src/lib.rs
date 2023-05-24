@@ -7,11 +7,10 @@
 
 mod errors;
 
-use errors::CodeArchiverResult;
-use sleppa_primitives::{
-    repositories::{github::GithubRepository, *},
-    Configurable, Context,
-};
+use errors::{CodeArchiverError, CodeArchiverResult};
+use sleppa_configuration::constants::{CONFIGURATION_KEY, CONFIGURATION_REPO};
+use sleppa_configuration::Context;
+use sleppa_primitives::repositories::RepositoryTag;
 
 /// Defines the code archiver plugin and its fields
 ///
@@ -20,18 +19,6 @@ use sleppa_primitives::{
 pub struct CodeArchiverPlugin {
     /// The tag associated with the release in the GitHub repository
     pub release_tag: RepositoryTag,
-    /// The repository where the release is to be published
-    pub repository: GithubRepository,
-}
-
-impl Configurable<String, CodeArchiverResult<String>> for CodeArchiverPlugin {
-    /// Loads the credentials to publish the release.
-    ///
-    /// For GitHub it could be input = "GITHUB_TOKEN".
-    fn load(&self, input: String) -> CodeArchiverResult<String> {
-        let token = std::env::var(input)?;
-        Ok(token)
-    }
 }
 
 impl CodeArchiverPlugin {
@@ -39,13 +26,22 @@ impl CodeArchiverPlugin {
     ///
     /// The release is published for a given [RepositoryTag] into a [GithubRepository].
     /// The credentials are mandatory to publish a release.
-    pub async fn run(&self, _context: &Context, token: String) -> CodeArchiverResult<()> {
+    pub async fn run(&self, context: &Context) -> CodeArchiverResult<()> {
+        let repository = match context.configurations[&CONFIGURATION_KEY.to_string()].map
+            [&CONFIGURATION_REPO.to_string()]
+            .as_repository()
+        {
+            Some(value) => value,
+            None => return Err(CodeArchiverError::InvalidContext("missing repository".to_string())),
+        };
+
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
         // Build an octocrab instance with the provided credentials.
         let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
 
         // Publishes the release for the given tag.
         octocrab
-            .repos(&self.repository.owner, &self.repository.repo)
+            .repos(repository.owner, repository.repo)
             .releases()
             .create(&self.release_tag.identifier)
             .target_commitish("main")

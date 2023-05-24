@@ -11,35 +11,64 @@
 //! The `analyze` function sets the correct release action field of the given [Commit]s if a [ReleaseAction] is found.
 
 mod configuration;
+pub mod constants;
 mod errors;
 
-use configuration::{errors::ConfigurationResult, *};
-use errors::*;
-use sleppa_primitives::{Commit, ReleaseAction};
-use sleppa_primitives::{Configurable, Context};
+use configuration::{try_parse, CommitAnalyzerConfiguration, ReleaseRuleHandler, ReleaseRules};
+use constants::{COMMIT_ANALYZER_FILE, COMMIT_ANALYZER_KEY};
+use errors::{CommitAnalyzerError, CommitAnalyzerResult};
+use sleppa_configuration::{
+    constants::{CONFIGURATION_COMMITS, CONFIGURATION_KEY},
+    Configurable, Context,
+};
+use sleppa_primitives::{Commit, ReleaseAction, Value};
 use std::path::Path;
 
 /// Defines the commit analyzer plugin
 ///
 /// This plugins aims at analyzing given commits messages to determine the [ReleaseAction] type to
 /// apply.
-#[derive(Debug, Default)]
-pub struct CommitAnalyzerPlugin;
+#[derive(Debug)]
+pub struct CommitAnalyzerPlugin {
+    configuration: CommitAnalyzerConfiguration,
+}
 
 impl CommitAnalyzerPlugin {
+    pub fn build(context: &Context) -> CommitAnalyzerResult<Self> {
+        let plugin = match CommitAnalyzerPlugin::load(context) {
+            Ok(value) => CommitAnalyzerPlugin {
+                configuration: try_parse(Path::new(&value))?,
+            },
+            Err(_) => CommitAnalyzerPlugin {
+                configuration: CommitAnalyzerConfiguration::default(),
+            },
+        };
+        Ok(plugin)
+    }
+
     /// Verifies multiple commit messages to retrieve the higher release action type to apply.
     ///
     /// This function receives a list of commit messages, as a vector of [String]s, and analyzes them
     /// to retrieve the release action type to apply since the last tag.
     /// As it is impossible to have two release action types at the same time, only the higher one is kept.
     /// Also the analyzed [Commit] is modified to provide the [ReleaseAction] found to it.
-    pub fn run(&self, _context: &Context, commits: &mut Vec<Commit>, rules: &ReleaseRules) -> Option<ReleaseAction> {
+    pub fn run(&self, context: &mut Context) -> CommitAnalyzerResult<Option<ReleaseAction>> {
         let mut major_count = 0;
         let mut minor_count = 0;
         let mut patch_count = 0;
 
+        let mut commits = match context.configurations[&CONFIGURATION_KEY.to_string()].map
+            [&CONFIGURATION_COMMITS.to_string()]
+            .as_commits()
+        {
+            Some(value) => value,
+            None => return Err(CommitAnalyzerError::InvalidContext("No commits found.".to_string())),
+        };
+
+        let rules = &self.configuration.release_rules;
+
         // Matches the release action type according to the commit message contents.
-        for commit in commits {
+        for commit in &mut commits {
             match self.execute(commit, rules) {
                 Ok(ReleaseAction::Major) => {
                     major_count += 1;
@@ -62,16 +91,24 @@ impl CommitAnalyzerPlugin {
                 Err(_err) => continue,
             }
         }
+        context
+            .configurations
+            .get_mut(&CONFIGURATION_KEY.to_string())
+            .map(|config| {
+                config
+                    .map
+                    .insert(CONFIGURATION_COMMITS.to_string(), Value::Commits(commits))
+            });
 
         // Returns only the higher action release type.
         if major_count > 0 {
-            Some(ReleaseAction::Major)
+            Ok(Some(ReleaseAction::Major))
         } else if minor_count > 0 {
-            Some(ReleaseAction::Minor)
+            Ok(Some(ReleaseAction::Minor))
         } else if patch_count > 0 {
-            Some(ReleaseAction::Patch)
+            Ok(Some(ReleaseAction::Patch))
         } else {
-            None
+            Ok(None)
         }
     }
 
@@ -93,13 +130,42 @@ impl CommitAnalyzerPlugin {
     }
 }
 
-impl Configurable<&Path, ConfigurationResult<Configuration>> for CommitAnalyzerPlugin {
+impl Configurable<CommitAnalyzerResult<String>> for CommitAnalyzerPlugin {
     /// Loads the configuration file for the CommitAnalyzerPlugin
     ///
     /// The [CommitAnalyzerPlugin] needs a [Configuration] in order to run. This Configuration
     /// is loaded thanks to a given file path.
-    fn load(&self, input: &Path) -> ConfigurationResult<Configuration> {
-        try_parse(input)
+    fn load(context: &Context) -> CommitAnalyzerResult<String> {
+        let config = match context.configurations.get(&COMMIT_ANALYZER_KEY.to_string()) {
+            Some(value) => value,
+            None => {
+                return Err(CommitAnalyzerError::InvalidContext(format!(
+                    "{}, loads the default file",
+                    COMMIT_ANALYZER_KEY
+                )));
+            }
+        };
+
+        let path = match config.map.get(&COMMIT_ANALYZER_FILE.to_string()) {
+            Some(value) => value,
+            None => {
+                return Err(CommitAnalyzerError::InvalidContext(format!(
+                    "{}, loads the default file",
+                    COMMIT_ANALYZER_FILE
+                )));
+            }
+        };
+
+        let file = match path.as_string() {
+            Some(value) => value,
+            None => {
+                return Err(CommitAnalyzerError::InvalidContext(
+                    "No value found, loads the default file".to_string(),
+                ));
+            }
+        };
+
+        Ok(file.to_string())
     }
 }
 

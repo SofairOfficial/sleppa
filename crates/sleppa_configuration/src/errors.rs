@@ -1,4 +1,4 @@
-/// Enumerates all errors that can occur when processing a commit analyzer configuration.
+/// Enumerates all errors that can occur when processing with configuration.
 ///
 /// This list is a central structure aiming to define errors that can occur
 /// while reading and parsing the configuration file.
@@ -7,14 +7,6 @@ pub enum ConfigurationError {
     /// Chained I/O errors
     #[error(transparent)]
     InputOutputError(#[from] std::io::Error),
-
-    /// Chained Toml file processing errors
-    #[error(transparent)]
-    ErrorReadingToml(#[from] toml::de::Error),
-
-    /// Chained errors occurring when processing regular expressions
-    #[error(transparent)]
-    RegexError(#[from] regex::Error),
 
     /// Chained errors occurring when processing with repositories
     #[error(transparent)]
@@ -28,9 +20,9 @@ pub enum ConfigurationError {
     #[error("No match found.")]
     ErrorNoMatch(),
 
-    /// Message is not correct
-    #[error("Missing key in context")]
-    InvalidContext(),
+    /// Missing key or value in context
+    #[error("Missing key in context: {0}")]
+    InvalidContext(String),
 }
 
 /// Definition of the configuration parser result

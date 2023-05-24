@@ -19,6 +19,10 @@ pub enum ChangelogError {
     // None found in context
     #[error("None found in context : {0}")]
     ErrorContextNone(String),
+
+    /// Missing key or value in context
+    #[error("Missing key in context: {0}")]
+    InvalidContext(String),
 }
 
 /// Result type alias returned by function.

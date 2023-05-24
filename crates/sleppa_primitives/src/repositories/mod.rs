@@ -16,6 +16,7 @@ use async_trait::async_trait;
 use errors::RepositoryResult;
 
 /// Definition of a repository's tag.
+#[derive(Clone, Debug)]
 pub struct RepositoryTag {
     /// Value of the tag e.g. `v3.2.1` where `v{major}.{minor}.{patch}`
     pub identifier: String,
@@ -24,6 +25,7 @@ pub struct RepositoryTag {
 }
 
 /// Definition of a repository's user
+#[derive(Clone, Debug)]
 pub struct RepositoryUser {
     pub name: String,
     pub email: String,

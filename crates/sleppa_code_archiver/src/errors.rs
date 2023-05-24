@@ -15,6 +15,10 @@ pub enum CodeArchiverError {
     // Chained errors occurring when accessing environment variables
     #[error(transparent)]
     VarError(#[from] std::env::VarError),
+
+    /// Missing key or value in context
+    #[error("Missing key in context: {0}")]
+    InvalidContext(String),
 }
 
 /// Definition of the commit analyzer result

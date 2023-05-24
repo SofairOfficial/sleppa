@@ -5,14 +5,8 @@
 
 pub mod repositories;
 
+use repositories::{github::GithubRepository, RepositoryTag, RepositoryUser};
 use serde::{Deserialize, Serialize};
-use sleppa_configuration::Configuration;
-
-/// The context structure is used to pass the data from plugin to plugin.
-#[derive(Default)]
-pub struct Context {
-    pub configuration: Configuration,
-}
 
 /// Defines Commit and its fields
 #[derive(Debug, Clone, PartialEq)]
@@ -23,6 +17,16 @@ pub struct Commit {
     pub message: String,
     /// Commit associated ReleaseAction
     pub release_action: Option<ReleaseAction>,
+}
+
+/// Defines possible values used by plugin
+#[derive(Clone, Debug)]
+pub enum Value {
+    String(String),
+    Commits(Vec<Commit>),
+    User(RepositoryUser),
+    Repository(GithubRepository),
+    Tag(RepositoryTag),
 }
 
 /// Enumerates available release actions.
@@ -37,12 +41,6 @@ pub enum ReleaseAction {
     Patch,
 }
 
-/// If the plugin needs a configuration to work, this traits defines the behavior to load this
-/// configuration.
-pub trait Configurable<T, V> {
-    fn load(&self, input: T) -> V;
-}
-
 impl Commit {
     /// Creates a new Commit with its hash and its message
     ///
@@ -52,6 +50,44 @@ impl Commit {
             hash: sha,
             message: commitmessage,
             release_action: None,
+        }
+    }
+}
+
+impl Value {
+    /// Extracts the string slice value if it is a string slice.
+    pub fn as_string(&self) -> Option<&str> {
+        match *self {
+            Value::String(ref s) => Some(&**s),
+            _ => None,
+        }
+    }
+
+    pub fn as_commits(&self) -> Option<Vec<Commit>> {
+        match self {
+            Value::Commits(s) => Some(s.to_vec()),
+            _ => None,
+        }
+    }
+
+    pub fn as_tag(&self) -> Option<RepositoryTag> {
+        match self {
+            Value::Tag(s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn as_user(&self) -> Option<RepositoryUser> {
+        match self {
+            Value::User(s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn as_repository(&self) -> Option<GithubRepository> {
+        match self {
+            Value::Repository(s) => Some(s.clone()),
+            _ => None,
         }
     }
 }

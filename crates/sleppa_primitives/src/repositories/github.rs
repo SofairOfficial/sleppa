@@ -38,7 +38,7 @@ use super::{
 /// - a name
 ///
 /// The path is then like `/repos/{owner}/{name}/` for the GitHub's API
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct GithubRepository {
     /// Represents the owner
     pub owner: String,
@@ -55,12 +55,10 @@ impl Repository for GithubRepository {
     ///
     /// The octocrab semantic API returns a [octocrab::Page] of [octocrab::Tag].
     async fn get_last_tag(&self) -> RepositoryResult<RepositoryTag> {
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
         // Get all the tag of a repository.
-        let page_tags = octocrab::instance()
-            .repos(&self.owner, &self.repo)
-            .list_tags()
-            .send()
-            .await?;
+        let page_tags = octocrab.repos(&self.owner, &self.repo).list_tags().send().await?;
 
         if page_tags.items.is_empty() {
             // Creates an empty [RepositoryTag] if no tag is found.
@@ -121,11 +119,10 @@ impl GithubRepository {
     ///
     /// The octocrab Semantic API returns a [octocrab::Page] of [RepoCommit].
     pub async fn get_pull_request(&self, tag_sha: &str) -> RepositoryResult<Vec<String>> {
-        let repo_commits = octocrab::instance()
-            .repos(&self.owner, &self.repo)
-            .list_commits()
-            .send()
-            .await?;
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
+
+        let repo_commits = octocrab.repos(&self.owner, &self.repo).list_commits().send().await?;
 
         let mut pull_request_messages: Vec<String> = vec![];
 
@@ -154,7 +151,7 @@ impl GithubRepository {
     /// where `6` indicates the pull request's number. That number is retrieved by this function using a regex format.
     pub fn get_pull_request_number_from_its_name(pull_request_name: &str) -> RepositoryResult<u64> {
         // Creates the regex expression for the pull request's name grammar e.g. `Issue to solve (#5)`.
-        let regex = Regex::new(r"\(\#(?P<number>[0-9]+)\)$")?;
+        let regex = Regex::new(r"\([a-z]*\#(?P<number>[0-9]+)\)$")?;
 
         // Verifies if the grammar matches the pull request's name
         let captured = match regex.captures(pull_request_name) {
@@ -184,11 +181,14 @@ impl GithubRepository {
     /// From the pull request's number, its inner commits are retrieved thanks to [octocrab] HTTP API.
     /// The inner commit of a pull request are [RepoCommit] in octocrab.
     pub async fn get_inner_commits_from_pull_request(&self, pr_number: u64) -> RepositoryResult<Vec<RepoCommit>> {
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
+
         // Format the route to the repository
         let repo_address = format! {"/repos/{}/{}/pulls/{}/commits", &self.owner, &self.repo, pr_number};
 
         // Retrieve the inner commits with the octocrab HTTP API
-        let commits = octocrab::instance().get(repo_address, None::<&()>).await?;
+        let commits = octocrab.get(repo_address, None::<&()>).await?;
         Ok(commits)
     }
 }

@@ -38,15 +38,15 @@ use std::path::Path;
 ///
 /// The `release_rules` hashmap contains 3 keys : `major`, `minor` and `patch`.
 /// For every key a [ReleaseRule] is associated.
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct Configuration {
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct CommitAnalyzerConfiguration {
     pub release_rules: ReleaseRules,
 }
 
 /// Enumerates available format for a release rule.
 ///
 /// Two format are available : Regex and PEG.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum ReleaseRuleFormat {
     /// Grammar of the release rule is defined as a [regular expression](https://en.wikipedia.org/wiki/Regular_expression)
@@ -59,7 +59,7 @@ pub enum ReleaseRuleFormat {
 ///
 /// A ReleaseRule is defined by its format as a [ReleaseRuleFormat] and its associated
 /// grammar as a [String].
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReleaseRule {
     /// The format is a [ReleaseRuleFormat] : `Regex` or `Peg`
     pub format: ReleaseRuleFormat,
@@ -76,10 +76,37 @@ pub trait ReleaseRuleHandler {
     fn handle(&self, commit: &Commit) -> ConfigurationResult<()>;
 }
 
-impl Configuration {
-    /// Implementation of the `new` method : `Configuration::new()`
-    pub fn new() -> Self {
-        Configuration::default()
+impl CommitAnalyzerConfiguration {
+    /// Loads a default CommitAnalyzerConfiguration
+    ///
+    /// This default [CommitAnalyzerConfiguration] is the one used by Sleppa to parse commit's message
+    pub fn default() -> Self {
+        let mut releaserules: HashMap<ReleaseAction, ReleaseRule> = HashMap::new();
+        releaserules.insert(
+            ReleaseAction::Major,
+            ReleaseRule {
+                format: ReleaseRuleFormat::Regex,
+                grammar: r"^(?P<type>break){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$".to_string(),
+            },
+        );
+        releaserules.insert(
+            ReleaseAction::Minor,
+            ReleaseRule {
+                format: ReleaseRuleFormat::Regex,
+                grammar: r"^(?P<type>build|ci|docs|feat){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$".to_string(),
+            },
+        );
+        releaserules.insert(
+            ReleaseAction::Patch,
+            ReleaseRule {
+                format: ReleaseRuleFormat::Regex,
+                grammar: r"^(?P<type>fix|perf|refac|sec|style|test){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$".to_string(),
+            },
+        );
+
+        CommitAnalyzerConfiguration {
+            release_rules: releaserules,
+        }
     }
 }
 
@@ -115,10 +142,10 @@ impl ReleaseRuleHandler for ReleaseRule {
 /// a [Configuration] is returned or a [ConfigurationError] otherwise.
 /// The parsing returns a [ConfigurationError] if a [ReleaseAction] is missing or if the
 /// `format` is not recognized.
-pub(crate) fn try_parse(path: &Path) -> ConfigurationResult<Configuration> {
+pub(crate) fn try_parse(path: &Path) -> ConfigurationResult<CommitAnalyzerConfiguration> {
     let content = fs::read_to_string(path)?;
 
-    let config: Configuration = toml::from_str(&content)?;
+    let config: CommitAnalyzerConfiguration = toml::from_str(&content)?;
 
     // Verify that the configuration file contains a release rule for each release action types.
     if config.release_rules.get(&ReleaseAction::Major).is_none() {

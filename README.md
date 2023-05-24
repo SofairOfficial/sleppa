@@ -6,7 +6,7 @@ Original [semantic-release](https://github.com/semantic-release/semantic-release
 
 ## How it works
 
-The module `repositories` of the `sleppa_primitives` analyzes a given repository to retriveve the `commits` since the last tag. GitHub reposiroties are now supported but others git file system could be added thanks to the trait `Reposiroty`.
+The module `repositories` of the `sleppa_primitives` analyzes a given repository to retrieve the `commits` since the last tag. GitHub reposiroties are now supported but others git file system could be added thanks to the trait `Reposiroty`.
 
 These `commits` are given to the `sleppa_commit_analyzer` which will analyze their message. In order to proceed, a configuration file that defines the release rules is loaded.
 The crate determines the new release action type to apply.

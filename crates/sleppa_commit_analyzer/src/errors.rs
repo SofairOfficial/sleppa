@@ -1,10 +1,8 @@
-use serde::Deserialize;
-
 /// Error enumeration for the commit message analyzer parser module.
 ///
 /// This list is a central structure aiming to define errors that can occur
 /// while getting and parsing commit's message.
-#[derive(thiserror::Error, Debug, Deserialize)]
+#[derive(thiserror::Error, Debug)]
 pub enum CommitAnalyzerError {
     /// No release action type match found
     #[error("No release action found")]
@@ -13,6 +11,14 @@ pub enum CommitAnalyzerError {
     /// Message is not correct
     #[error("No release action found")]
     InvalidMessage(),
+
+    /// Message is not correct
+    #[error("Missing key in context : {0}")]
+    InvalidContext(String),
+
+    /// Chained sleppa commit analyzer configuration errors
+    #[error(transparent)]
+    ConfigurationError(#[from] crate::configuration::errors::ConfigurationError),
 }
 
 /// Definition of the commit analyzer result

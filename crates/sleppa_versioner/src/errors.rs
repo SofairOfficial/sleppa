@@ -16,6 +16,10 @@ pub enum VersionerError {
     // No match found when capturing the number with the regex
     #[error("No match found for {0}.")]
     ErrorNoMatch(String),
+
+    /// Missing key or value in context
+    #[error("Missing key in context: {0}")]
+    InvalidContext(String),
 }
 
 /// Definition of the commit analyzer result

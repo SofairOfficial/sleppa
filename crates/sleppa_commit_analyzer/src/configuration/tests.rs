@@ -2,7 +2,7 @@
 //!
 //! This testing module implements the unit tests for testing the configuration processing routines.
 
-use super::{errors::*, *};
+use crate::configuration::{errors::*, *};
 use std::fs::File;
 use std::io::Write;
 use tempfile::tempdir;

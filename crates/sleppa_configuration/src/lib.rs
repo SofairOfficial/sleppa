@@ -1,13 +1,25 @@
 //! Sleppa configuration management package
 //!
 
-use serde::{Deserialize, Serialize};
+pub mod constants;
+pub mod errors;
 
-/// Configuration data structure
-///
-/// This structure will be used to deserialize the toml into this Rust usable type.
-///
-/// The `release_rules` hashmap contains 3 keys : `major`, `minor` and `patch`.
-/// For every key a [ReleaseRule] is associated.
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct Configuration;
+use sleppa_primitives::Value;
+use std::collections::HashMap;
+
+#[derive(Clone, Debug)]
+pub struct Configuration {
+    pub map: HashMap<String, Value>,
+}
+
+/// The context structure is used to store configuration.
+#[derive(Default)]
+pub struct Context {
+    pub configurations: HashMap<String, Configuration>,
+}
+
+/// If the plugin needs a configuration to work, this traits defines the behavior to load this
+/// configuration
+pub trait Configurable<T> {
+    fn load(context: &Context) -> T;
+}

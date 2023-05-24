@@ -2,7 +2,7 @@
 //!
 //! This testing module implements the unit tests for testing the changelog generator routines.
 
-use super::{errors::*, *};
+use crate::{errors::TestResult, *};
 use rstest::*;
 use tempfile::tempdir;
 

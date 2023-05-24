@@ -24,6 +24,8 @@ rust-version.workspace = true
 
 [dependencies]
 
+sleppa_primitives = { workspace = true }
+
 # External dependencies
 serde = { version = "^1.0", features = ["derive"] }
 
