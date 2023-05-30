@@ -1,0 +1,47 @@
+[package]
+name = "sleppa_notifier"
+description = "Send a pos to a collaboration platform when a new release is published."
+version = "0.1.0"
+
+keywords = [
+    "Sleppa",
+    "semantic-release",
+    "tag",
+    "version",
+    "release-automation",
+    "release-workflow",
+]
+
+categories = ["Development tools"]
+
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+# Local dependencies
+sleppa_primitives = { workspace = true }
+sleppa_configuration = { workspace = true }
+
+# External dependencies
+async-trait = { version = "^0.1" }
+reqwest = { version = "0.11.8", features = ["json"] }
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = { version = "^1.0" }
+
+# Errors and logs processing
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "^1.28", default-features = false, features = ["macros"] }
+tokio-test = { version = "^0.4" }
+
+[lib]
+name = "sleppa_notifier"
+crate-type = ["lib"]
+path = "src/lib.rs"
