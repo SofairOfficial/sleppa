@@ -3,6 +3,7 @@
 //! This testing module implements the unit tests for testing the repositories module routines.
 
 use crate::repositories::{errors::TestResult, github::GithubRepository, *};
+use std::env::set_var;
 
 // Tests to retrieve a pull request number's from it's name.
 #[test]
@@ -128,6 +129,7 @@ async fn test_can_get_inner_commits_from_pull_request() -> TestResult<()> {
 #[tokio::test]
 #[ignore = "time consuming test"]
 async fn test_can_get_inner_commits() -> TestResult<()> {
+    set_var("GITHUB_TOKEN", "token");
     let githubrepository = GithubRepository {
         repo: "semantic-release-squash-and-merge-testbed".to_string(),
         owner: "SofairOfficial".to_string(),

@@ -9,6 +9,14 @@
 //! - Major > Minor > Patch
 //!
 //! The `analyze` function sets the correct release action field of the given [Commit]s if a [ReleaseAction] is found.
+//!
+//! Datas used to analyze commits are retrieved from a [Context] structure.
+//! This context should contain a [CONFIGURATION_KEY] associated with its [Configuration] structure.
+//! This [Configuration] should contain a [CONFIGURATION_COMMITS] to access the list of commits to analyze.
+//!
+//! User could defined it's own [ReleaseRules] to analyze commits by providing a configuration file.
+//! This file could be accessed with the [COMMIT_ANALYZER_KEY] to access the [COMMIT_ANALYZER_FILE]. If these keys are
+//! not defined, the process fallback to the default [ReleaseRules].
 
 mod configuration;
 pub mod constants;
@@ -19,7 +27,7 @@ use constants::{COMMIT_ANALYZER_FILE, COMMIT_ANALYZER_KEY};
 use errors::{CommitAnalyzerError, CommitAnalyzerResult};
 use sleppa_configuration::{
     constants::{CONFIGURATION_COMMITS, CONFIGURATION_KEY},
-    Configurable, Context,
+    Context,
 };
 use sleppa_primitives::{Commit, ReleaseAction, Value};
 use std::path::Path;
@@ -35,7 +43,7 @@ pub struct CommitAnalyzerPlugin {
 
 impl CommitAnalyzerPlugin {
     pub fn build(context: &Context) -> CommitAnalyzerResult<Self> {
-        let plugin = match CommitAnalyzerPlugin::load(context) {
+        let plugin = match CommitAnalyzerPlugin::load_file(context) {
             Ok(value) => CommitAnalyzerPlugin {
                 configuration: try_parse(Path::new(&value))?,
             },
@@ -57,10 +65,7 @@ impl CommitAnalyzerPlugin {
         let mut minor_count = 0;
         let mut patch_count = 0;
 
-        let mut commits = match context.configurations[&CONFIGURATION_KEY.to_string()].map
-            [&CONFIGURATION_COMMITS.to_string()]
-            .as_commits()
-        {
+        let mut commits = match context.load_commits() {
             Some(value) => value,
             None => return Err(CommitAnalyzerError::InvalidContext("No commits found.".to_string())),
         };
@@ -91,14 +96,11 @@ impl CommitAnalyzerPlugin {
                 Err(_err) => continue,
             }
         }
-        context
-            .configurations
-            .get_mut(&CONFIGURATION_KEY.to_string())
-            .map(|config| {
-                config
-                    .map
-                    .insert(CONFIGURATION_COMMITS.to_string(), Value::Commits(commits))
-            });
+        context.configurations.get_mut(CONFIGURATION_KEY).map(|config| {
+            config
+                .map
+                .insert(CONFIGURATION_COMMITS.to_string(), Value::Commits(commits))
+        });
 
         // Returns only the higher action release type.
         if major_count > 0 {
@@ -128,39 +130,24 @@ impl CommitAnalyzerPlugin {
             Err(CommitAnalyzerError::ErrorNoMatching())
         }
     }
-}
 
-impl Configurable<CommitAnalyzerResult<String>> for CommitAnalyzerPlugin {
     /// Loads the configuration file for the CommitAnalyzerPlugin
     ///
-    /// The [CommitAnalyzerPlugin] needs a [Configuration] in order to run. This Configuration
-    /// is loaded thanks to a given file path.
-    fn load(context: &Context) -> CommitAnalyzerResult<String> {
-        let config = match context.configurations.get(&COMMIT_ANALYZER_KEY.to_string()) {
-            Some(value) => value,
-            None => {
-                return Err(CommitAnalyzerError::InvalidContext(format!(
-                    "{}, loads the default file",
-                    COMMIT_ANALYZER_KEY
-                )));
-            }
-        };
-
-        let path = match config.map.get(&COMMIT_ANALYZER_FILE.to_string()) {
-            Some(value) => value,
-            None => {
-                return Err(CommitAnalyzerError::InvalidContext(format!(
-                    "{}, loads the default file",
-                    COMMIT_ANALYZER_FILE
-                )));
-            }
-        };
-
-        let file = match path.as_string() {
+    /// If the user wants others [ReleaseRules], then [CommitAnalyzerPlugin] needs a [Configuration] in order to run.
+    /// The path of the file is accessed with thanks [COMMIT_ANALYZER_KEY] in the [Context] and the [COMMIT_ANALYZER_FILE]
+    /// in the associated Configuration.
+    /// The default rules are loaded if no path is provided.
+    fn load_file(context: &Context) -> CommitAnalyzerResult<String> {
+        let file = match context
+            .configurations
+            .get(COMMIT_ANALYZER_KEY)
+            .and_then(|conf| conf.map.get(COMMIT_ANALYZER_FILE))
+            .and_then(|data| data.as_string())
+        {
             Some(value) => value,
             None => {
                 return Err(CommitAnalyzerError::InvalidContext(
-                    "No value found, loads the default file".to_string(),
+                    "No value found, loads the default release rules".to_string(),
                 ));
             }
         };

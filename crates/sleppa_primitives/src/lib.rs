@@ -44,7 +44,7 @@ pub enum ReleaseAction {
 impl Commit {
     /// Creates a new Commit with its hash and its message
     ///
-    /// The others values of [Commit] are set as None at first.
+    /// The release_action is set as None at first. It will be determined later.
     pub fn new(commitmessage: String, sha: String) -> Self {
         Commit {
             hash: sha,

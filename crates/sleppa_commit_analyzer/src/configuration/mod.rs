@@ -1,22 +1,25 @@
 //! Sleppa configuration management package
 //!
 //! This parser reads the configuration file and converts it to Rust structure [Configuration].
-//! This configuration file must contain a `[release_rule]` section with three types of release actions, namely `major`, `minor` and `patch`.
-//! These three release action types are mandatory and must be written in lower case, as shown in the example below :
+//! This configuration file must contain a `[release_rule]` section with three types of release actions, namely `major`,
+//! `minor` and `patch`.
+//! These three release action types are mandatory and must be written in lower case, as shown below :
 //!
 //!```toml
 //! [release_rules]
 //! major = { format = "regex", grammar = '^(?P<type>break){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }
-//! minor = { format = "regex", grammar = '^(?P<type>ci|feat){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }
-//! patch = { format = "regex", grammar = '^(?P<type>fix|refac|test){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }
+//! minor = { format = "regex", grammar = '^(?P<type>build|ci|docs|feat){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }
+//! patch = { format = "regex", grammar = '^(?P<type>fix|perf|refac|sec|style|test){1}(?P<scope>\(\S.*\S\))?:\s.*[a-z0-9]$' }
 //!```
+//!
+//! These are the default release action types used by `sleppa_commit_analyzer`, as described in the contributor's bible.
 //!
 //! For each release rule, user must define a format and a grammar. The format defines the idiom used for describing
 //! the grammar that will be used for analysing a commit message. Two formats are now supported,
 //! namely `regex` (for [regular expression](https://en.wikipedia.org/wiki/Regular_expression))
 //! and `peg` (for [parsing expression grammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar)).
 //!
-//! The function [try_parse] returns a [Configuration] :
+//! The function [try_parse] returns a [CommitAnalyzerConfiguration] :
 //! - `Hashmap<ReleaseAction, ReleaseRule { ReleaseRuleFormat, String }>`
 //!
 //! The trait [ReleaseRuleHandler] handles the release rule and verifies if a commit message
@@ -27,7 +30,7 @@ pub mod errors;
 use errors::{ConfigurationError, ConfigurationResult};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use sleppa_primitives::{Commit, ReleaseAction};
+use sleppa_primitives::*;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;

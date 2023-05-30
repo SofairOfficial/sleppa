@@ -8,7 +8,6 @@
 mod errors;
 
 use errors::{CodeArchiverError, CodeArchiverResult};
-use sleppa_configuration::constants::{CONFIGURATION_KEY, CONFIGURATION_REPO};
 use sleppa_configuration::Context;
 use sleppa_primitives::repositories::RepositoryTag;
 
@@ -27,10 +26,7 @@ impl CodeArchiverPlugin {
     /// The release is published for a given [RepositoryTag] into a [GithubRepository].
     /// The credentials are mandatory to publish a release.
     pub async fn run(&self, context: &Context) -> CodeArchiverResult<()> {
-        let repository = match context.configurations[&CONFIGURATION_KEY.to_string()].map
-            [&CONFIGURATION_REPO.to_string()]
-            .as_repository()
-        {
+        let repository = match context.load_repository() {
             Some(value) => value,
             None => return Err(CodeArchiverError::InvalidContext("missing repository".to_string())),
         };

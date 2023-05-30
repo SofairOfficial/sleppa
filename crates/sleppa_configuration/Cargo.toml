@@ -1,6 +1,6 @@
 [package]
 name = "sleppa_configuration"
-description = "Configuration management"
+description = "Configuration management package"
 version = "0.1.0"
 
 keywords = [

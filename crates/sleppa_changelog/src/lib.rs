@@ -24,18 +24,23 @@
 //!
 //! While the file is written, it has to be automatically commited to the reposiroty with a message : `Release v4.0.0`
 //! where `v4.0.0` is the new tag.
+//!
+//! Datas used to create the changelog are retrieved from a [Context] structure.
+//! This context should contain a [CHANGELOG_KEY] associated with its [Configuration] structure.
+//! This [Configuration] should contain a [REPOSIROTY_URL_KEY] to access the url of the repository.
+//! Optionnaly, to provide a user defined changelog file path to write to, it also should contain a [CHANGELOG_FILE_KEY].
+//! If this key is not defined, it uses the [CHANGELOG_DEFAULT_PATH] as path.
 
 pub mod constants;
 mod errors;
 
-use constants::CHANGELOG_DEFAULT_PATH;
+use constants::{CHANGELOG_DEFAULT_PATH, CHANGELOG_FILE_KEY, CHANGELOG_KEY, REPOSIROTY_URL_KEY};
 use errors::{ChangelogError, ChangelogResult};
-use sleppa_configuration::constants::{
-    CONFIGURATION_COMMITS, CONFIGURATION_KEY, CONFIGURATION_LAST_TAG, CONFIGURATION_NEW_TAG, CONFIGURATION_USER,
-};
 use sleppa_configuration::Context;
-use sleppa_primitives::repositories::RepositoryUser;
-use sleppa_primitives::{Commit, ReleaseAction};
+use sleppa_primitives::{
+    repositories::RepositoryUser,
+    {Commit, ReleaseAction},
+};
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
@@ -74,38 +79,43 @@ impl ChangelogPlugin {
     /// The file is written using the commits messages as source of information. The changelog groups the
     /// commits using their [ReleaseAction] type.
     ///
-    /// The `repo_url` argument is used to write the file html link. Whereas the `changelog_path` is the path where to
-    /// write the CHANGELOG.md file.
-    pub fn run(&mut self, context: &Context, changelog_path: &Path, repo_url: &str) -> ChangelogResult<()> {
-        let commits = match context.configurations[&CONFIGURATION_KEY.to_string()].map
-            [&CONFIGURATION_COMMITS.to_string()]
-            .as_commits()
-        {
+    /// The `repo_url` argument is used to write the file html link.
+    pub fn run(&mut self, context: &Context) -> ChangelogResult<()> {
+        let commits = match context.load_commits() {
             Some(value) => value,
             None => return Err(ChangelogError::InvalidContext("No commits found.".to_string())),
         };
 
-        let last_tag = match context.configurations[&CONFIGURATION_KEY.to_string()].map
-            [&CONFIGURATION_LAST_TAG.to_string()]
-            .as_tag()
-        {
+        let last_tag = match context.load_last_tag() {
             Some(value) => value,
             None => return Err(ChangelogError::InvalidContext("No last tag found.".to_string())),
         };
 
-        let new_tag = match context.configurations[&CONFIGURATION_KEY.to_string()].map
-            [&CONFIGURATION_NEW_TAG.to_string()]
-            .as_tag()
-        {
+        let new_tag = match context.load_new_tag() {
             Some(value) => value,
             None => return Err(ChangelogError::InvalidContext("No new tag found.".to_string())),
         };
 
-        let user = match context.configurations[&CONFIGURATION_KEY.to_string()].map[&CONFIGURATION_USER.to_string()]
-            .as_user()
-        {
+        let user = match context.load_user() {
             Some(value) => value,
-            None => return Err(ChangelogError::InvalidContext("missing user".to_string())),
+            None => return Err(ChangelogError::InvalidContext("Missing user".to_string())),
+        };
+
+        let repo_url =
+            match context.configurations[&CHANGELOG_KEY.to_string()].map[&REPOSIROTY_URL_KEY.to_string()].as_string() {
+                Some(value) => value,
+                None => return Err(ChangelogError::InvalidContext("Missing repository url".to_string())),
+            };
+
+        // Verifies if the user provided a changelog file path.
+        // Fallback to the [CHANGELOG_DEFAULT_PATH] if none.
+        let changelog_path = match context.configurations[&CHANGELOG_KEY.to_string()]
+            .map
+            .get(&CHANGELOG_FILE_KEY.to_string())
+            .and_then(|value| value.as_string())
+        {
+            Some(path) => Path::new(path),
+            None => Path::new(CHANGELOG_DEFAULT_PATH),
         };
 
         // Builds the [ChangelogPlugin] from commits, last tag and new tag
@@ -120,7 +130,7 @@ impl ChangelogPlugin {
         self.serialize(changelog_path)?;
 
         // Commits the changelog file to the repository
-        self.commit_changelog(&user)?;
+        self.commit_changelog(&user, changelog_path)?;
         Ok(())
     }
 
@@ -229,29 +239,21 @@ impl ChangelogPlugin {
     ///
     /// This function commits the file to the repository with the provided path.
     /// The commit message is like `Release v3.2.1`.
-    fn commit_changelog(&self, user: &RepositoryUser) -> ChangelogResult<()> {
+    fn commit_changelog(&self, user: &RepositoryUser, changelog_path: &Path) -> ChangelogResult<()> {
         let commit_user = format!(r#"git config user.name "{}""#, user.name);
         let commit_user_email = format!(r#"git config user.email "{}""#, user.email);
         let commit_message = format!(r#"git commit -m "Release {}""#, &self.new_tag);
+        let git_add = format!(r#"git add {}"#, changelog_path.to_string_lossy());
 
-        Command::new("sh")
-            .args(["-c", commit_user.as_str()])
-            .status()
-            .expect("Failed");
+        Command::new("sh").args(["-c", commit_user.as_str()]).status()?;
 
-        Command::new("sh")
-            .args(["-c", commit_user_email.as_str()])
-            .status()
-            .expect("Failed");
+        Command::new("sh").args(["-c", commit_user_email.as_str()]).status()?;
 
-        Command::new("sh").args(["-c", "git add -A"]).status().expect("Failed");
+        Command::new("sh").args(["-c", git_add.as_str()]).status()?;
 
-        Command::new("sh")
-            .args(["-c", commit_message.as_str()])
-            .status()
-            .expect("Failed");
+        Command::new("sh").args(["-c", commit_message.as_str()]).status()?;
 
-        Command::new("sh").args(["-c", "git push"]).status().expect("Failed");
+        Command::new("sh").args(["-c", "git push"]).status()?;
 
         Ok(())
     }

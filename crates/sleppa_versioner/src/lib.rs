@@ -7,15 +7,17 @@
 //!  - major: adds 1 to the first digit and set 0 to others, e.g. from `3.2.1` -> `4.0.0`,
 //!  - minor: adds 1 to the second and set 0 to the third, e.g. from `3.2.1` -> `3.3.0`,
 //!  - patch: adds 1 to the third, e.g. from `3.2.1` -> `3.2.2`.
+//!
+//! Datas used to create the new version are retrieved from a [Context] structure.
+//! This context should contain a [CONFIGURATION_KEY] associated with its [Configuration] structure.
+//! This [Configuration] should contain a [REPOSIROTY_LAST_TAG] to access the last tag of the repository.
+//! This [Configuration] should contain a [REPOSIROTY_USER] to access an authorized user for the repository.
 
 mod errors;
 
 use errors::{VersionerError, VersionerResult};
 use regex::Regex;
-use sleppa_configuration::{
-    constants::{CONFIGURATION_KEY, CONFIGURATION_LAST_TAG, CONFIGURATION_USER},
-    Context,
-};
+use sleppa_configuration::Context;
 use sleppa_primitives::{repositories::RepositoryUser, ReleaseAction};
 
 use std::process::Command;
@@ -42,17 +44,12 @@ impl VersionerPlugin {
     ///
     /// This function takes an existing [Tag] and calculates the new tag for a given [ReleaseAction].
     pub fn run(&self, context: &Context) -> VersionerResult<Tag> {
-        let last_tag = match context.configurations[&CONFIGURATION_KEY.to_string()].map
-            [&CONFIGURATION_LAST_TAG.to_string()]
-            .as_tag()
-        {
+        let last_tag = match context.load_last_tag() {
             Some(value) => value,
             None => return Err(VersionerError::InvalidContext("missing last tag".to_string())),
         };
 
-        let user = match context.configurations[&CONFIGURATION_KEY.to_string()].map[&CONFIGURATION_USER.to_string()]
-            .as_user()
-        {
+        let user = match context.load_user() {
             Some(value) => value,
             None => return Err(VersionerError::InvalidContext("missing last tag".to_string())),
         };
@@ -76,21 +73,11 @@ impl VersionerPlugin {
 
         Command::new("sh").arg("-c").arg(commit_user).status().expect("failed");
 
-        Command::new("sh")
-            .arg("-c")
-            .arg(commit_user_email)
-            .status()
-            .expect("failed");
+        Command::new("sh").arg("-c").arg(commit_user_email).status()?;
 
-        Command::new("sh")
-            .args(["-c", commit_tag.as_str()])
-            .status()
-            .expect("failed");
+        Command::new("sh").args(["-c", commit_tag.as_str()]).status()?;
 
-        Command::new("sh")
-            .args(["-c", "git push --tags"])
-            .status()
-            .expect("failed");
+        Command::new("sh").args(["-c", "git push --tags"]).status()?;
 
         Ok(())
     }

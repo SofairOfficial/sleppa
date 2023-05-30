@@ -29,8 +29,6 @@ pub struct RepositoryTag {
 pub struct RepositoryUser {
     pub name: String,
     pub email: String,
-    // The credentials for the user. This could be a `GITHUB_TOKEN`.
-    pub signing_key: String,
 }
 
 /// Trait to interface the git system used.
@@ -45,11 +43,10 @@ pub trait Repository {
 
 impl RepositoryUser {
     /// Provides a method to create a now user from name, email and credential datas.
-    pub fn new(username: String, useremail: String, credential: String) -> Self {
+    pub fn new(username: String, useremail: String) -> Self {
         RepositoryUser {
             name: username,
             email: useremail,
-            signing_key: credential,
         }
     }
 }
