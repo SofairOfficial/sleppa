@@ -4,7 +4,7 @@
 
 use crate::{errors::TestResult, *};
 
-// Tests the conversion of a string tag into a [Tag] structure
+// Casts a string tag into a [Tag] structure
 #[test]
 fn test_can_try_into() -> TestResult<()> {
     // Unit test preparation
@@ -30,7 +30,7 @@ fn test_can_try_into() -> TestResult<()> {
     Ok(())
 }
 
-// Tests the parsing from Tag to String
+// Parses from Tag to String
 #[test]
 fn test_can_into_string() {
     // Unit test preparation
@@ -40,12 +40,12 @@ fn test_can_into_string() {
         patch: 1,
     };
 
-    let tag_string: String = tag.into_string();
+    let tag_string: String = tag.try_into().unwrap();
 
     assert_eq!(tag_string, "v3.2.1");
 }
 
-// Tests a Tag's incrementation from a release action type
+// Increments a Tag's from a release action type
 #[test]
 fn test_can_increment() {
     // Unit test preparation

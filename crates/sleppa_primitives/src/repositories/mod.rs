@@ -33,12 +33,18 @@ pub struct RepositoryUser {
 
 /// Trait to interface the git system used.
 #[async_trait]
-pub trait Repository {
+pub trait GitRepository {
     /// Get the repository's last tag and its sha.
-    async fn get_last_tag(&self) -> RepositoryResult<RepositoryTag>;
+    async fn get_tag(&self) -> RepositoryResult<RepositoryTag>;
 
     /// Get inner commit messages since the last tag.
     async fn get_inner_commits(&self) -> RepositoryResult<Vec<Commit>>;
+
+    /// Push a new release
+    async fn push_release(&self, tag: RepositoryTag) -> RepositoryResult<()>;
+
+    ///
+    fn get_url(&self) -> String;
 }
 
 impl RepositoryUser {

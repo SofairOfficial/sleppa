@@ -48,7 +48,7 @@ async fn test_can_get_last_tag() -> TestResult<()> {
     };
 
     // Execution step
-    let response = githubrepository.get_last_tag().await?;
+    let response = githubrepository.get_tag().await?;
 
     // Asserts the name of the tag and its hash are ok.
     assert_eq!(response.identifier, "v1.0.0");

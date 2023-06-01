@@ -11,56 +11,59 @@
 //! The `analyze` function sets the correct release action field of the given [Commit]s if a [ReleaseAction] is found.
 //!
 //! Datas used to analyze commits are retrieved from a [Context] structure.
-//! This context should contain a [CONFIGURATION_KEY] associated with its [Configuration] structure.
-//! This [Configuration] should contain a [CONFIGURATION_COMMITS] to access the list of commits to analyze.
+//! This [Context] should contain a [CONTEXT_COMMITS] to access the list of commits to analyze.
 //!
-//! User could defined it's own [ReleaseRules] to analyze commits by providing a configuration file.
-//! This file could be accessed with the [COMMIT_ANALYZER_KEY] to access the [COMMIT_ANALYZER_FILE]. If these keys are
-//! not defined, the process fallback to the default [ReleaseRules].
+//! User could defined it's own [ReleaseRules] to analyze commits by providing a configuration thanks to
+//! the method [with_configuration(&mut self, configuration_file_path: &str)].
+//! If no file path is provided, the default [ReleaseRules] are used.
 
 mod configuration;
-pub mod constants;
 mod errors;
 
 use configuration::{try_parse, CommitAnalyzerConfiguration, ReleaseRuleHandler, ReleaseRules};
-use constants::{COMMIT_ANALYZER_FILE, COMMIT_ANALYZER_KEY};
 use errors::{CommitAnalyzerError, CommitAnalyzerResult};
-use sleppa_configuration::{
-    constants::{CONFIGURATION_COMMITS, CONFIGURATION_KEY},
-    Context,
+use sleppa_primitives::{
+    constants::CONTEXT_COMMITS, repositories::GitRepository, Commit, Context, ReleaseAction, Value,
 };
-use sleppa_primitives::{Commit, ReleaseAction, Value};
 use std::path::Path;
 
 /// Defines the commit analyzer plugin
 ///
 /// This plugins aims at analyzing given commits messages to determine the [ReleaseAction] type to
 /// apply.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CommitAnalyzerPlugin {
     configuration: CommitAnalyzerConfiguration,
 }
 
 impl CommitAnalyzerPlugin {
-    pub fn build(context: &Context) -> CommitAnalyzerResult<Self> {
-        let plugin = match CommitAnalyzerPlugin::load_file(context) {
-            Ok(value) => CommitAnalyzerPlugin {
-                configuration: try_parse(Path::new(&value))?,
-            },
-            Err(_) => CommitAnalyzerPlugin {
-                configuration: CommitAnalyzerConfiguration::default(),
-            },
-        };
-        Ok(plugin)
+    /// Implements the creation of a new `CommitAnalyzerPlugin`
+    ///
+    /// This loads the defaults [ReleaseRules] for the configuration.
+    pub fn new() -> Self {
+        Self {
+            configuration: CommitAnalyzerConfiguration::default(),
+        }
+    }
+
+    /// Loads the configuration file for the CommitAnalyzerPlugin
+    ///
+    /// If the user wants others [ReleaseRules], then [CommitAnalyzerPlugin] needs another configuration in order to run.
+    /// These new rules are provided by reading a given file thanks to its `configuration_file_path`.
+    pub fn with_configuration(&mut self, configuration_file_path: &str) -> CommitAnalyzerResult<&mut Self> {
+        let path = Path::new(configuration_file_path);
+        self.configuration = try_parse(path)?;
+
+        Ok(self)
     }
 
     /// Verifies multiple commit messages to retrieve the higher release action type to apply.
     ///
-    /// This function receives a list of commit messages, as a vector of [String]s, and analyzes them
-    /// to retrieve the release action type to apply since the last tag.
+    /// This function loads the commits from the [Context], and analyzes them to retrieve the release action
+    /// type to apply since the last tag.
     /// As it is impossible to have two release action types at the same time, only the higher one is kept.
-    /// Also the analyzed [Commit] is modified to provide the [ReleaseAction] found to it.
-    pub fn run(&self, context: &mut Context) -> CommitAnalyzerResult<Option<ReleaseAction>> {
+    /// Also the analyzed [Commit] is updated to provide the [ReleaseAction] associated to it.
+    pub fn run<R: GitRepository>(&self, context: &mut Context<R>) -> CommitAnalyzerResult<Option<ReleaseAction>> {
         let mut major_count = 0;
         let mut minor_count = 0;
         let mut patch_count = 0;
@@ -78,7 +81,6 @@ impl CommitAnalyzerPlugin {
                 Ok(ReleaseAction::Major) => {
                     major_count += 1;
 
-                    // Sets the release action to the [Commit]
                     commit.release_action = Some(ReleaseAction::Major);
                 }
                 Ok(ReleaseAction::Minor) => {
@@ -96,11 +98,7 @@ impl CommitAnalyzerPlugin {
                 Err(_err) => continue,
             }
         }
-        context.configurations.get_mut(CONFIGURATION_KEY).map(|config| {
-            config
-                .map
-                .insert(CONFIGURATION_COMMITS.to_string(), Value::Commits(commits))
-        });
+        context.map.insert(CONTEXT_COMMITS.to_string(), Value::Commits(commits));
 
         // Returns only the higher action release type.
         if major_count > 0 {
@@ -129,30 +127,6 @@ impl CommitAnalyzerPlugin {
         } else {
             Err(CommitAnalyzerError::ErrorNoMatching())
         }
-    }
-
-    /// Loads the configuration file for the CommitAnalyzerPlugin
-    ///
-    /// If the user wants others [ReleaseRules], then [CommitAnalyzerPlugin] needs a [Configuration] in order to run.
-    /// The path of the file is accessed with thanks [COMMIT_ANALYZER_KEY] in the [Context] and the [COMMIT_ANALYZER_FILE]
-    /// in the associated Configuration.
-    /// The default rules are loaded if no path is provided.
-    fn load_file(context: &Context) -> CommitAnalyzerResult<String> {
-        let file = match context
-            .configurations
-            .get(COMMIT_ANALYZER_KEY)
-            .and_then(|conf| conf.map.get(COMMIT_ANALYZER_FILE))
-            .and_then(|data| data.as_string())
-        {
-            Some(value) => value,
-            None => {
-                return Err(CommitAnalyzerError::InvalidContext(
-                    "No value found, loads the default release rules".to_string(),
-                ));
-            }
-        };
-
-        Ok(file.to_string())
     }
 }
 

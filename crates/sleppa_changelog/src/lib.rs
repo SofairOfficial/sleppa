@@ -22,24 +22,24 @@
 //!  * style: style change ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))
 //!```
 //!
-//! While the file is written, it has to be automatically commited to the reposiroty with a message : `Release v4.0.0`
+//! While the file is written, it has to be automatically commited to the repository with a message : `Release v4.0.0`
 //! where `v4.0.0` is the new tag.
 //!
 //! Datas used to create the changelog are retrieved from a [Context] structure.
-//! This context should contain a [CHANGELOG_KEY] associated with its [Configuration] structure.
-//! This [Configuration] should contain a [REPOSIROTY_URL_KEY] to access the url of the repository.
-//! Optionnaly, to provide a user defined changelog file path to write to, it also should contain a [CHANGELOG_FILE_KEY].
-//! If this key is not defined, it uses the [CHANGELOG_DEFAULT_PATH] as path.
+//! The plugin loads [CONTEXT_LAST_TAG], [CONTEXT_NEW_TAG], [CONTEXT_USER] and [CONTEXT_COMMITS] from the [Context].
+//! Therefore these keys/values must be provided.
+//!
+//! The changelog file is written, by default, at the [CHANGELOG_DEFAULT_PATH].
+//! However, another path could be provided thanks to the method `with_configuration()` to set the path and the name of the file.
 
 pub mod constants;
 mod errors;
 
-use constants::{CHANGELOG_DEFAULT_PATH, CHANGELOG_FILE_KEY, CHANGELOG_KEY, REPOSIROTY_URL_KEY};
+use constants::CHANGELOG_DEFAULT_PATH;
 use errors::{ChangelogError, ChangelogResult};
-use sleppa_configuration::Context;
 use sleppa_primitives::{
-    repositories::RepositoryUser,
-    {Commit, ReleaseAction},
+    repositories::{GitRepository, RepositoryUser},
+    Context, {Commit, ReleaseAction},
 };
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
@@ -48,12 +48,11 @@ use std::path::Path;
 use std::process::Command;
 use time::{format_description, OffsetDateTime};
 
-/// Defines the Changelog and its fields.
+/// Definition of the Changelog plugin.
 ///
 /// Changelog structure contains mandatory elements to create the file, namely, the map between commit type and
 /// commit messages, the last tag, the new tag and the URL of the repository.
 /// The URL is used to write hlink in the changelog file, therefore using a String here is sufficient.
-#[derive(Default)]
 pub struct ChangelogPlugin {
     /// Sections are represented by the three [ReleaseAction] type (the keys) associated with their [Commit]s (the value).
     /// As the order of the key is important, a [BTreeMap] is needed here.
@@ -64,6 +63,23 @@ pub struct ChangelogPlugin {
     pub new_tag: String,
     /// The repository's URL like `https://github.com/USER/REPO`
     pub repo_url: String,
+
+    changelog_path: Option<String>,
+}
+
+impl Default for ChangelogPlugin {
+    /// Provides the implementation of the Default trait.
+    ///
+    /// The changelog_path field is set to `None` to fallback to the default changelog file path
+    fn default() -> Self {
+        Self {
+            sections: BTreeMap::new(),
+            last_tag: String::new(),
+            new_tag: String::new(),
+            repo_url: String::new(),
+            changelog_path: None,
+        }
+    }
 }
 
 impl ChangelogPlugin {
@@ -72,15 +88,22 @@ impl ChangelogPlugin {
         ChangelogPlugin::default()
     }
 
+    /// Provides a new changelog file path to the ChangelogPlugin
+    ///
+    /// The default path and name are [CHANGELOG_DEFAULT_PATH], however another one can be set with this method.
+    /// ChangelogPlugin::new().with_configuration("mydir/mychangelog.md");
+    pub fn with_configuration(&mut self, file_path: &str) -> &mut Self {
+        self.changelog_path = Some(file_path.to_string());
+        self
+    }
+
     /// Executes the main function of the changelog generator plugin
     ///
-    /// This function builds the [ChangelogPlugin] from a vector of [Commit]s and writes the file to a
-    /// provided path.
+    /// This function builds the [ChangelogPlugin] from a vector of [Commit]s contained in a [Context]
+    /// and writes the file to a provided path or, by default, to the [CHANGELOG_DEFAULT_PATH].
     /// The file is written using the commits messages as source of information. The changelog groups the
     /// commits using their [ReleaseAction] type.
-    ///
-    /// The `repo_url` argument is used to write the file html link.
-    pub fn run(&mut self, context: &Context) -> ChangelogResult<()> {
+    pub fn run<R: GitRepository>(&mut self, context: &Context<R>) -> ChangelogResult<()> {
         let commits = match context.load_commits() {
             Some(value) => value,
             None => return Err(ChangelogError::InvalidContext("No commits found.".to_string())),
@@ -101,36 +124,28 @@ impl ChangelogPlugin {
             None => return Err(ChangelogError::InvalidContext("Missing user".to_string())),
         };
 
-        let repo_url =
-            match context.configurations[&CHANGELOG_KEY.to_string()].map[&REPOSIROTY_URL_KEY.to_string()].as_string() {
-                Some(value) => value,
-                None => return Err(ChangelogError::InvalidContext("Missing repository url".to_string())),
-            };
-
-        // Verifies if the user provided a changelog file path.
-        // Fallback to the [CHANGELOG_DEFAULT_PATH] if none.
-        let changelog_path = match context.configurations[&CHANGELOG_KEY.to_string()]
-            .map
-            .get(&CHANGELOG_FILE_KEY.to_string())
-            .and_then(|value| value.as_string())
-        {
-            Some(path) => Path::new(path),
-            None => Path::new(CHANGELOG_DEFAULT_PATH),
-        };
+        let repo_url = context.repository.get_url();
 
         // Builds the [ChangelogPlugin] from commits, last tag and new tag
         self.with_commits(
             commits,
             last_tag.identifier.as_str(),
             new_tag.identifier.as_str(),
-            repo_url,
+            repo_url.as_str(),
         );
 
+        // Verifies if the user provided a changelog file path.
+        // Fallback to the [CHANGELOG_DEFAULT_PATH] if none.
+        let file_path = match &self.changelog_path {
+            Some(path) => Path::new(path),
+            None => Path::new(CHANGELOG_DEFAULT_PATH),
+        };
+
         // Creates the changelog file at the given path
-        self.serialize(changelog_path)?;
+        self.serialize(file_path)?;
 
         // Commits the changelog file to the repository
-        self.commit_changelog(&user, changelog_path)?;
+        self.commit_changelog(&user, file_path)?;
         Ok(())
     }
 

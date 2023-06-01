@@ -9,24 +9,23 @@
 //!  - patch: adds 1 to the third, e.g. from `3.2.1` -> `3.2.2`.
 //!
 //! Datas used to create the new version are retrieved from a [Context] structure.
-//! This context should contain a [CONFIGURATION_KEY] associated with its [Configuration] structure.
-//! This [Configuration] should contain a [REPOSIROTY_LAST_TAG] to access the last tag of the repository.
-//! This [Configuration] should contain a [REPOSIROTY_USER] to access an authorized user for the repository.
+//! This [Context] should contain [CONTEXT_LAST_TAG] to access the last tag of the repository, [CONTEXT_USER] to access
+//! the user to commit the [Tag] and a [CONTEXT_RELEASE_ACTION] to access the release action type found.
 
 mod errors;
 
 use errors::{VersionerError, VersionerResult};
 use regex::Regex;
-use sleppa_configuration::Context;
-use sleppa_primitives::{repositories::RepositoryUser, ReleaseAction};
+use sleppa_primitives::{
+    repositories::{GitRepository, RepositoryUser},
+    Context, ReleaseAction,
+};
 
 use std::process::Command;
 
-pub struct VersionerPlugin {
-    pub release_action: ReleaseAction,
-}
+pub struct VersionerPlugin;
 
-/// Defines a Tag and its fields
+/// Definition of a Tag
 ///
 /// A tag is defined like `v3.2.1` where `v{major}.{minor}.{patch}`
 #[derive(Debug, PartialEq)]
@@ -43,7 +42,7 @@ impl VersionerPlugin {
     /// Calculates the new Tag for a given release action
     ///
     /// This function takes an existing [Tag] and calculates the new tag for a given [ReleaseAction].
-    pub fn run(&self, context: &Context) -> VersionerResult<Tag> {
+    pub fn run<R: GitRepository>(&self, context: &Context<R>) -> VersionerResult<Tag> {
         let last_tag = match context.load_last_tag() {
             Some(value) => value,
             None => return Err(VersionerError::InvalidContext("missing last tag".to_string())),
@@ -51,12 +50,17 @@ impl VersionerPlugin {
 
         let user = match context.load_user() {
             Some(value) => value,
-            None => return Err(VersionerError::InvalidContext("missing last tag".to_string())),
+            None => return Err(VersionerError::InvalidContext("missing user".to_string())),
+        };
+
+        let release_action = match context.load_release_action() {
+            Some(value) => value,
+            None => return Err(VersionerError::InvalidContext("missing release action".to_string())),
         };
 
         let tag = Tag::try_from(last_tag.identifier.as_str())?;
 
-        let new_tag = tag.increment(&self.release_action);
+        let new_tag = tag.increment(&release_action);
         self.commit_tag(&user, &new_tag)?;
 
         Ok(new_tag)
@@ -125,6 +129,17 @@ impl TryFrom<&str> for Tag {
     }
 }
 
+impl TryInto<String> for Tag {
+    type Error = VersionerError;
+
+    /// Implements the parsing from [Tag] to [String]
+    ///
+    /// The `try_into` method cannot be explicit from the previous `try_from`,then it should be implemented.
+    fn try_into(self) -> VersionerResult<String> {
+        Ok(format!("v{}.{}.{}", self.major, self.minor, self.patch))
+    }
+}
+
 impl std::fmt::Display for Tag {
     /// Prints the correct format for Tag e.g. "v3.2.1".
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -133,11 +148,6 @@ impl std::fmt::Display for Tag {
 }
 
 impl Tag {
-    /// Implements the parsing from [Tag] to [String]
-    pub fn into_string(self) -> String {
-        format!("v{}.{}.{}", self.major, self.minor, self.patch)
-    }
-
     /// Increments the tag according to the release action
     ///
     /// A [Tag] is composed of 3 digits, e.g. `v3.2.1`. According to a [ReleaseAction], these digits

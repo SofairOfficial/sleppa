@@ -4,18 +4,6 @@
 /// while reading and parsing the configuration file.
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigurationError {
-    /// Chained I/O errors
-    #[error(transparent)]
-    InputOutputError(#[from] std::io::Error),
-
-    /// Chained errors occurring when processing with repositories
-    #[error(transparent)]
-    RepoError(#[from] sleppa_primitives::repositories::errors::RepositoryError),
-
-    /// Wrong or no ReleaseAction found
-    #[error("The release action is 'major', 'minor' or 'patch'. Found : {0}")]
-    IncorrectReleaseAction(String),
-
     /// No match found when analyzing commit message with the grammar
     #[error("No match found.")]
     ErrorNoMatch(),

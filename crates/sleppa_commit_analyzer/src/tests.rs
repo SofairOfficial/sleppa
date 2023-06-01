@@ -3,18 +3,18 @@
 //! This testing module implements the unit tests for testing the commit analyzer routines.
 
 use crate::{errors::TestResult, *};
-use sleppa_configuration::Configuration;
+use sleppa_primitives::repositories::github::GithubRepository;
 use std::collections::HashMap;
 
-// Test to retrieve the correct ReleaseAction from message.
+// Retrieves the correct ReleaseAction from message.
 //
 // The `execute` function must return a [ReleaseAction] if the message matches the defined regex.
 // A [CommitAnalyzerError] is returned if no matches.
 #[test]
 fn test_can_execute() -> TestResult<()> {
     // Unit test preparation
-    // Builds a default [Configuration] structure for testing purpose.
-    let config: CommitAnalyzerConfiguration = CommitAnalyzerConfiguration::default();
+    // Builds a default configuration structure for testing purpose.
+    let config = CommitAnalyzerConfiguration::default();
 
     // Creates correct messages for the grammar defined above
     let correct_message_major_release_action = "break: add a function".to_string();
@@ -53,26 +53,18 @@ fn test_can_execute() -> TestResult<()> {
     Ok(())
 }
 
-// Tests the function `analyze`.
-//
-// The `analyze` function analyzes multiple messages and return the highest
-// [ReleaseAction] found from them.
-// If a ReleaseAction is not found, a `None` is returned.
+// Retrieves a correct `ReleaseAction` from given commits
 #[test]
 fn test_can_run() {
     // Unit test preparation
+    let repo = GithubRepository {
+        owner: "owner".to_string(),
+        repo: "repo".to_string(),
+    };
     let mut context = Context {
-        configurations: HashMap::new(), //HashMap<String, Configuration>
+        map: HashMap::new(),
+        repository: repo,
     };
-
-    let config = Configuration {
-        map: HashMap::new(), //HashMap<String, Value>
-    };
-
-    context.configurations.insert(CONFIGURATION_KEY.to_string(), config);
-
-    // Builds a default [Configuration] structure for testing purpose.
-    let ca_config = CommitAnalyzerConfiguration::default();
 
     // Creates arrays of strings
     let correct_messages_major_release = vec![
@@ -91,72 +83,47 @@ fn test_can_run() {
     let correct_no_release: Vec<Commit> = vec![];
 
     // Execution step
-    let analyzer = CommitAnalyzerPlugin {
-        configuration: ca_config,
-    };
+    let analyzer = CommitAnalyzerPlugin::new();
 
-    context
-        .configurations
-        .get_mut(&CONFIGURATION_KEY.to_string())
-        .unwrap()
-        .map
-        .insert(
-            CONFIGURATION_COMMITS.to_string(),
-            Value::Commits(correct_messages_major_release),
-        );
+    context.map.insert(
+        CONTEXT_COMMITS.to_string(),
+        Value::Commits(correct_messages_major_release),
+    );
 
     // Asserts the results of the function matches the correct ReleaseAction
     assert_eq!(analyzer.run(&mut context).unwrap(), Some(ReleaseAction::Major));
 
     // Asserts the commit's release action type changed correctly
     assert_eq!(
-        context.configurations[&CONFIGURATION_KEY.to_string()].map[&CONFIGURATION_COMMITS.to_string()]
-            .as_commits()
-            .unwrap()[0]
-            .release_action,
+        context.map[CONTEXT_COMMITS].as_commits().unwrap()[0].release_action,
         Some(ReleaseAction::Major)
     );
 
     assert_eq!(
-        context.configurations[&CONFIGURATION_KEY.to_string()].map[&CONFIGURATION_COMMITS.to_string()]
-            .as_commits()
-            .unwrap()[1]
-            .release_action,
+        context.map[CONTEXT_COMMITS].as_commits().unwrap()[1].release_action,
         Some(ReleaseAction::Patch)
     );
 
     assert_eq!(
-        context.configurations[&CONFIGURATION_KEY.to_string()].map[&CONFIGURATION_COMMITS.to_string()]
-            .as_commits()
-            .unwrap()[2]
-            .release_action,
+        context.map[CONTEXT_COMMITS].as_commits().unwrap()[2].release_action,
         None
     );
 
     assert_eq!(
-        context.configurations[&CONFIGURATION_KEY.to_string()].map[&CONFIGURATION_COMMITS.to_string()]
-            .as_commits()
-            .unwrap()[3]
-            .release_action,
+        context.map[CONTEXT_COMMITS].as_commits().unwrap()[3].release_action,
         Some(ReleaseAction::Minor)
     );
 
-    context
-        .configurations
-        .get_mut(&CONFIGURATION_KEY.to_string())
-        .unwrap()
-        .map
-        .insert(
-            CONFIGURATION_COMMITS.to_string(),
-            Value::Commits(correct_messages_patch_release),
-        );
+    // Asserts the results of the function matches the correct ReleaseAction
+    context.map.insert(
+        CONTEXT_COMMITS.to_string(),
+        Value::Commits(correct_messages_patch_release),
+    );
     assert_eq!(analyzer.run(&mut context).unwrap(), Some(ReleaseAction::Patch));
 
+    // Asserts the results of the function matches the correct ReleaseAction
     context
-        .configurations
-        .get_mut(&CONFIGURATION_KEY.to_string())
-        .unwrap()
         .map
-        .insert(CONFIGURATION_COMMITS.to_string(), Value::Commits(correct_no_release));
+        .insert(CONTEXT_COMMITS.to_string(), Value::Commits(correct_no_release));
     assert!(analyzer.run(&mut context).unwrap().is_none());
 }

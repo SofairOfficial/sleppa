@@ -28,7 +28,7 @@ use regex::Regex;
 
 use super::{
     errors::{RepositoryError, RepositoryResult},
-    Repository, RepositoryTag,
+    GitRepository, RepositoryTag,
 };
 
 /// A minimal GitHub repository structure
@@ -47,14 +47,14 @@ pub struct GithubRepository {
 }
 
 #[async_trait]
-impl Repository for GithubRepository {
+impl GitRepository for GithubRepository {
     /// Get the reposiroty's last tag and its sha
     ///
     /// If the repository has no tag yet, an empty one is created.
     /// Else the repository's tag is used to create a new [RepositoryTag].
     ///
     /// The octocrab semantic API returns a [octocrab::Page] of [octocrab::Tag].
-    async fn get_last_tag(&self) -> RepositoryResult<RepositoryTag> {
+    async fn get_tag(&self) -> RepositoryResult<RepositoryTag> {
         let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
         let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
         // Get all the tag of a repository.
@@ -86,7 +86,7 @@ impl Repository for GithubRepository {
         let mut commits: Vec<Commit> = vec![];
 
         // Get the repository's tag.
-        let tag = self.get_last_tag().await?;
+        let tag = self.get_tag().await?;
 
         // Get the repository's pull request from the tag.
         let repo_commits = self.get_pull_request(&tag.hash).await?;
@@ -108,6 +108,26 @@ impl Repository for GithubRepository {
             }
         }
         Ok(commits)
+    }
+
+    async fn push_release(&self, tag: RepositoryTag) -> RepositoryResult<()> {
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+        // Build an octocrab instance with the provided credentials.
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
+
+        // Publishes the release for the given tag.
+        octocrab
+            .repos(self.owner.as_str(), self.repo.as_str())
+            .releases()
+            .create(&tag.identifier)
+            .target_commitish("main")
+            .send()
+            .await?;
+        Ok(())
+    }
+
+    fn get_url(&self) -> String {
+        format!("https://github.com/{}/{}", self.owner, self.repo)
     }
 }
 

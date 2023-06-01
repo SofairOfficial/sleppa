@@ -8,11 +8,11 @@ pub enum CommitAnalyzerError {
     #[error("No release action found")]
     ErrorNoMatching(),
 
-    /// Message is not correct
+    /// Commit's message is not correct
     #[error("No release action found")]
     InvalidMessage(),
 
-    /// Message is not correct
+    /// Missing key/value pair in the Context
     #[error("Missing key in context : {0}")]
     InvalidContext(String),
 

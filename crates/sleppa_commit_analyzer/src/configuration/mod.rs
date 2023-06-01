@@ -41,7 +41,7 @@ use std::path::Path;
 ///
 /// The `release_rules` hashmap contains 3 keys : `major`, `minor` and `patch`.
 /// For every key a [ReleaseRule] is associated.
-#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CommitAnalyzerConfiguration {
     pub release_rules: ReleaseRules,
 }
@@ -79,11 +79,11 @@ pub trait ReleaseRuleHandler {
     fn handle(&self, commit: &Commit) -> ConfigurationResult<()>;
 }
 
-impl CommitAnalyzerConfiguration {
+impl Default for CommitAnalyzerConfiguration {
     /// Loads a default CommitAnalyzerConfiguration
     ///
     /// This default [CommitAnalyzerConfiguration] is the one used by Sleppa to parse commit's message
-    pub fn default() -> Self {
+    fn default() -> Self {
         let mut releaserules: HashMap<ReleaseAction, ReleaseRule> = HashMap::new();
         releaserules.insert(
             ReleaseAction::Major,
