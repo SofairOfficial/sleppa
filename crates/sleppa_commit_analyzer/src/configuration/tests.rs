@@ -2,13 +2,13 @@
 //!
 //! This testing module implements the unit tests for testing the configuration processing routines.
 
-use super::{errors::*, *};
+use crate::configuration::{errors::*, *};
 use std::fs::File;
 use std::io::Write;
 use tempfile::tempdir;
 
 #[test]
-/// Tests the function `try_parse` for a correct configuration file.
+/// Tests the parsing of a correct configuration file
 fn test_can_parse_configuration_file() -> TestResult<()> {
     // Creates a temporary directory and a temporary file.
     let tmp_dir = tempdir()?;
@@ -68,7 +68,7 @@ fn test_can_parse_configuration_file() -> TestResult<()> {
 }
 
 #[test]
-/// Tests the `try_parse` function with an incorrect format in the configuration file.
+/// Tests the parsing of a wrong `format` in a configuration file.
 fn test_fail_wrong_format() -> TestResult<()> {
     // Creates a temporary directory and a temporary file.
     let tmp_dir = tempdir()?;
@@ -90,7 +90,7 @@ fn test_fail_wrong_format() -> TestResult<()> {
 }
 
 #[test]
-/// Tests the `try_parse` function with an incorrect release type in the configuration file.
+/// Tests the parsing of an incorrect release type in the configuration file.
 fn test_fail_case_sensitive() -> TestResult<()> {
     // Creates a temporary directory and a temporary file.
     let tmp_dir = tempdir()?;
@@ -119,7 +119,7 @@ fn test_fail_case_sensitive() -> TestResult<()> {
 }
 
 #[test]
-/// Tests the `try_parse` function with a missing release action in the configuration file
+/// Tests the parsing with a missing release action in the configuration file
 fn test_fail_missing_release() -> TestResult<()> {
     // Creates a temporary directory and a temporary file.
     let tmp_dir = tempdir()?;
@@ -144,7 +144,7 @@ fn test_fail_missing_release() -> TestResult<()> {
 }
 
 #[test]
-/// Tests the `try_parse` function with the missing [release_rules] field.
+/// Tests the parsing with the missing [release_rules] field.
 fn test_fail_missing_field() -> TestResult<()> {
     // Creates a temporary directory and a temporary file.
     let tmp_dir = tempdir()?;
@@ -172,7 +172,7 @@ fn test_fail_missing_field() -> TestResult<()> {
 }
 
 #[test]
-/// Tests the `handle`function implementation for a ReleaseRule
+/// Tests correct and incorrects messages to handle
 fn test_can_trait_implementation_regex() {
     // Unit test preparation
     // Creates an instance of a ReleaseRule
@@ -184,26 +184,32 @@ fn test_can_trait_implementation_regex() {
     // Creates correct messages for the grammar defined above
     // `feat` without scope is correct
     let msg0 = "feat: add a function";
+    let commit0 = Commit::new(msg0.to_string(), "somehash".to_string());
     // `feat` with a scope is correct
     let msg1 = "feat(sync): add a function";
+    let commit1 = Commit::new(msg1.to_string(), "somehash".to_string());
     // `ci` is correct
     let msg2 = "ci: add a workflow";
+    let commit2 = Commit::new(msg2.to_string(), "somehash".to_string());
 
     // Creates incorrect messages for the grammar defined above
     // `break` is incorrect
     let msg3 = "break(sync): add a function";
+    let commit3 = Commit::new(msg3.to_string(), "somehash".to_string());
     // Space after `feat` is incorrect
     let msg4 = "feat (sync): add a function";
+    let commit4 = Commit::new(msg4.to_string(), "somehash".to_string());
     // No semi-column after `feat` is incorrect
     let msg5 = "feat add a function";
+    let commit5 = Commit::new(msg5.to_string(), "somehash".to_string());
 
     // Asserts handle is matching
-    assert!(release_rule_def.handle(msg0).is_ok());
-    assert!(release_rule_def.handle(msg1).is_ok());
-    assert!(release_rule_def.handle(msg2).is_ok());
+    assert!(release_rule_def.handle(&commit0).is_ok());
+    assert!(release_rule_def.handle(&commit1).is_ok());
+    assert!(release_rule_def.handle(&commit2).is_ok());
 
     // Asserts handle is not matching
-    assert!(release_rule_def.handle(msg3).is_err());
-    assert!(release_rule_def.handle(msg4).is_err());
-    assert!(release_rule_def.handle(msg5).is_err());
+    assert!(release_rule_def.handle(&commit3).is_err());
+    assert!(release_rule_def.handle(&commit4).is_err());
+    assert!(release_rule_def.handle(&commit5).is_err());
 }

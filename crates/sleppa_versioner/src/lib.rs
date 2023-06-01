@@ -7,18 +7,25 @@
 //!  - major: adds 1 to the first digit and set 0 to others, e.g. from `3.2.1` -> `4.0.0`,
 //!  - minor: adds 1 to the second and set 0 to the third, e.g. from `3.2.1` -> `3.3.0`,
 //!  - patch: adds 1 to the third, e.g. from `3.2.1` -> `3.2.2`.
+//!
+//! Datas used to create the new version are retrieved from a [Context] structure.
+//! This [Context] should contain [CONTEXT_LAST_TAG] to access the last tag of the repository, [CONTEXT_USER] to access
+//! the user to commit the [Tag] and a [CONTEXT_RELEASE_ACTION] to access the release action type found.
 
 mod errors;
 
 use errors::{VersionerError, VersionerResult};
 use regex::Regex;
-use sleppa_configuration::ReleaseAction;
+use sleppa_primitives::{
+    repositories::{GitRepository, RepositoryUser},
+    Context, ReleaseAction,
+};
 
-pub struct VersionerPlugin {
-    pub release_action: ReleaseAction,
-}
+use std::process::Command;
 
-/// Defines a Tag and its fields
+pub struct VersionerPlugin;
+
+/// Definition of a Tag
 ///
 /// A tag is defined like `v3.2.1` where `v{major}.{minor}.{patch}`
 #[derive(Debug, PartialEq)]
@@ -35,8 +42,48 @@ impl VersionerPlugin {
     /// Calculates the new Tag for a given release action
     ///
     /// This function takes an existing [Tag] and calculates the new tag for a given [ReleaseAction].
-    pub fn run(&self, tag: Tag) -> Tag {
-        tag.increment(&self.release_action)
+    pub fn run<R: GitRepository>(&self, context: &Context<R>) -> VersionerResult<Tag> {
+        let last_tag = match context.load_last_tag() {
+            Some(value) => value,
+            None => return Err(VersionerError::InvalidContext("missing last tag".to_string())),
+        };
+
+        let user = match context.load_user() {
+            Some(value) => value,
+            None => return Err(VersionerError::InvalidContext("missing user".to_string())),
+        };
+
+        let release_action = match context.load_release_action() {
+            Some(value) => value,
+            None => return Err(VersionerError::InvalidContext("missing release action".to_string())),
+        };
+
+        let tag = Tag::try_from(last_tag.identifier.as_str())?;
+
+        let new_tag = tag.increment(&release_action);
+        self.commit_tag(&user, &new_tag)?;
+
+        Ok(new_tag)
+    }
+
+    /// Commits the new changelog file and the new tag
+    ///
+    /// This function commits the file to the repository with the provided path.
+    /// The commit message is like `Release v3.2.1`.
+    fn commit_tag(&self, user: &RepositoryUser, tag: &Tag) -> VersionerResult<()> {
+        let commit_user = format!(r#"git config user.name "{}""#, user.name);
+        let commit_user_email = format!(r#"git config user.email "{}""#, user.email);
+        let commit_tag = format!(r#"git tag {}"#, tag);
+
+        Command::new("sh").arg("-c").arg(commit_user).status().expect("failed");
+
+        Command::new("sh").arg("-c").arg(commit_user_email).status()?;
+
+        Command::new("sh").args(["-c", commit_tag.as_str()]).status()?;
+
+        Command::new("sh").args(["-c", "git push --tags"]).status()?;
+
+        Ok(())
     }
 }
 
@@ -82,6 +129,17 @@ impl TryFrom<&str> for Tag {
     }
 }
 
+impl TryInto<String> for Tag {
+    type Error = VersionerError;
+
+    /// Implements the parsing from [Tag] to [String]
+    ///
+    /// The `try_into` method cannot be explicit from the previous `try_from`,then it should be implemented.
+    fn try_into(self) -> VersionerResult<String> {
+        Ok(format!("v{}.{}.{}", self.major, self.minor, self.patch))
+    }
+}
+
 impl std::fmt::Display for Tag {
     /// Prints the correct format for Tag e.g. "v3.2.1".
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -97,7 +155,7 @@ impl Tag {
     ///  - 1 to the first digit and set 0 to others for major, e.g. from `3.2.1` -> `4.0.0`,
     ///  - 1 to the second and set 0 to the third for minor, e.g. from `3.2.1` -> `3.3.0`,
     ///  - 1 to the third for patch, e.g. from `3.2.1` -> `3.2.2`.
-    pub fn increment(&self, release_action: &ReleaseAction) -> Self {
+    fn increment(&self, release_action: &ReleaseAction) -> Self {
         let mut tag = Tag {
             major: self.major,
             minor: self.minor,

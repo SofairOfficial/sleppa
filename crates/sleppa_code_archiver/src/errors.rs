@@ -4,17 +4,13 @@
 /// while publishing a release.
 #[derive(thiserror::Error, Debug)]
 pub enum CodeArchiverError {
-    // Chained errors occuring when processing with GitHub
-    #[error(transparent)]
-    GithubErr(#[from] octocrab::GitHubError),
-
     // Chained errors occuring when processing with octocrab's API
     #[error(transparent)]
-    ApiError(#[from] octocrab::Error),
+    RepoError(#[from] sleppa_primitives::repositories::errors::RepositoryError),
 
-    // Chained errors occurring when accessing environment variables
-    #[error(transparent)]
-    VarError(#[from] std::env::VarError),
+    /// Missing key or value in context
+    #[error("Missing key in context: {0}")]
+    InvalidContext(String),
 }
 
 /// Definition of the commit analyzer result

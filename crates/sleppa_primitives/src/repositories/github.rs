@@ -21,13 +21,14 @@
 //! Once the pull request has been merged to a branch, it is available as a [RepoCommit] with its own properties like
 //! message and hash.
 
+use crate::Commit;
 use async_trait::async_trait;
 use octocrab::models::repos::RepoCommit;
 use regex::Regex;
 
 use super::{
     errors::{RepositoryError, RepositoryResult},
-    Repository, RepositoryTag,
+    GitRepository, RepositoryTag,
 };
 
 /// A minimal GitHub repository structure
@@ -37,7 +38,7 @@ use super::{
 /// - a name
 ///
 /// The path is then like `/repos/{owner}/{name}/` for the GitHub's API
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct GithubRepository {
     /// Represents the owner
     pub owner: String,
@@ -46,20 +47,18 @@ pub struct GithubRepository {
 }
 
 #[async_trait]
-impl Repository for GithubRepository {
+impl GitRepository for GithubRepository {
     /// Get the reposiroty's last tag and its sha
     ///
     /// If the repository has no tag yet, an empty one is created.
     /// Else the repository's tag is used to create a new [RepositoryTag].
     ///
     /// The octocrab semantic API returns a [octocrab::Page] of [octocrab::Tag].
-    async fn get_last_tag(&self) -> RepositoryResult<RepositoryTag> {
+    async fn get_tag(&self) -> RepositoryResult<RepositoryTag> {
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
         // Get all the tag of a repository.
-        let page_tags = octocrab::instance()
-            .repos(&self.owner, &self.repo)
-            .list_tags()
-            .send()
-            .await?;
+        let page_tags = octocrab.repos(&self.owner, &self.repo).list_tags().send().await?;
 
         if page_tags.items.is_empty() {
             // Creates an empty [RepositoryTag] if no tag is found.
@@ -80,14 +79,14 @@ impl Repository for GithubRepository {
 
     /// Get inner commit messages since the last tag
     ///
-    /// From a repository's name and owner, all the inner commits' messages since the last tag are retrieved.
+    /// From a repository's name and owner, all the inner commits since the last tag are retrieved.
     /// If no tag is found, all the [RepoCommit] are analyzed.
     /// If the name of the pull request is malformed, it is then ignored.
-    async fn get_inner_commits(&self) -> RepositoryResult<Vec<String>> {
-        let mut inner_commits_messages: Vec<String> = vec![];
+    async fn get_inner_commits(&self) -> RepositoryResult<Vec<Commit>> {
+        let mut commits: Vec<Commit> = vec![];
 
         // Get the repository's tag.
-        let tag = self.get_last_tag().await?;
+        let tag = self.get_tag().await?;
 
         // Get the repository's pull request from the tag.
         let repo_commits = self.get_pull_request(&tag.hash).await?;
@@ -105,10 +104,30 @@ impl Repository for GithubRepository {
 
             // Pushes inner commit messages to the result array
             for commit in inner_commits {
-                inner_commits_messages.push(commit.commit.message.to_string());
+                commits.push(Commit::new(commit.commit.message.to_string(), commit.sha.to_string()));
             }
         }
-        Ok(inner_commits_messages)
+        Ok(commits)
+    }
+
+    async fn push_release(&self, tag: RepositoryTag) -> RepositoryResult<()> {
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+        // Build an octocrab instance with the provided credentials.
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
+
+        // Publishes the release for the given tag.
+        octocrab
+            .repos(self.owner.as_str(), self.repo.as_str())
+            .releases()
+            .create(&tag.identifier)
+            .target_commitish("main")
+            .send()
+            .await?;
+        Ok(())
+    }
+
+    fn get_url(&self) -> String {
+        format!("https://github.com/{}/{}", self.owner, self.repo)
     }
 }
 
@@ -120,11 +139,10 @@ impl GithubRepository {
     ///
     /// The octocrab Semantic API returns a [octocrab::Page] of [RepoCommit].
     pub async fn get_pull_request(&self, tag_sha: &str) -> RepositoryResult<Vec<String>> {
-        let repo_commits = octocrab::instance()
-            .repos(&self.owner, &self.repo)
-            .list_commits()
-            .send()
-            .await?;
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
+
+        let repo_commits = octocrab.repos(&self.owner, &self.repo).list_commits().send().await?;
 
         let mut pull_request_messages: Vec<String> = vec![];
 
@@ -153,7 +171,7 @@ impl GithubRepository {
     /// where `6` indicates the pull request's number. That number is retrieved by this function using a regex format.
     pub fn get_pull_request_number_from_its_name(pull_request_name: &str) -> RepositoryResult<u64> {
         // Creates the regex expression for the pull request's name grammar e.g. `Issue to solve (#5)`.
-        let regex = Regex::new(r"\(\#(?P<number>[0-9]+)\)$")?;
+        let regex = Regex::new(r"\([a-z]*\#(?P<number>[0-9]+)\)$")?;
 
         // Verifies if the grammar matches the pull request's name
         let captured = match regex.captures(pull_request_name) {
@@ -183,11 +201,14 @@ impl GithubRepository {
     /// From the pull request's number, its inner commits are retrieved thanks to [octocrab] HTTP API.
     /// The inner commit of a pull request are [RepoCommit] in octocrab.
     pub async fn get_inner_commits_from_pull_request(&self, pr_number: u64) -> RepositoryResult<Vec<RepoCommit>> {
+        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+        let octocrab = octocrab::Octocrab::builder().personal_token(token).build()?;
+
         // Format the route to the repository
         let repo_address = format! {"/repos/{}/{}/pulls/{}/commits", &self.owner, &self.repo, pr_number};
 
         // Retrieve the inner commits with the octocrab HTTP API
-        let commits = octocrab::instance().get(repo_address, None::<&()>).await?;
+        let commits = octocrab.get(repo_address, None::<&()>).await?;
         Ok(commits)
     }
 }

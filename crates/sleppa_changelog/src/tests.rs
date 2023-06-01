@@ -2,47 +2,47 @@
 //!
 //! This testing module implements the unit tests for testing the changelog generator routines.
 
-use super::{errors::*, *};
+use crate::{errors::TestResult, *};
 use rstest::*;
 use tempfile::tempdir;
 
-// Use fixture to create a reusable list of commits
+// Uses fixture to create a reusable list of commits
 #[fixture]
 fn commits_constructor() -> Vec<Commit> {
     // Creates multiple commit types :
-    // Type : break
+    // Type : Major
     let commit1 = Commit {
         message: "break: new breaking".to_string(),
-        commit_type: "break".to_string(),
+        release_action: Some(ReleaseAction::Major),
         hash: "1ebdf43e8950d8f9dace2e554be5d387267575ef".to_string(),
     };
 
-    // Type : feat
+    // Type : Minor
     let commit2_1 = Commit {
         message: "feat: new feature".to_string(),
-        commit_type: "feat".to_string(),
+        release_action: Some(ReleaseAction::Minor),
         hash: "172cd1589d0a29b56cd8261a888911201305b04d".to_string(),
     };
     let commit2_2 = Commit {
-        message: "feat: another feature".to_string(),
-        commit_type: "feat".to_string(),
+        message: "refac: refac the function".to_string(),
+        release_action: Some(ReleaseAction::Minor),
         hash: "000cd1589d0a29b56cd8261a888911201305b04d".to_string(),
     };
 
-    // Type : patch
+    // Type : Patch
     let commit3_1 = Commit {
         message: "patch: new patch".to_string(),
-        commit_type: "patch".to_string(),
+        release_action: Some(ReleaseAction::Patch),
         hash: "cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a".to_string(),
     };
     let commit3_2 = Commit {
-        message: "patch: another patch".to_string(),
-        commit_type: "patch".to_string(),
+        message: "sec: security fix".to_string(),
+        release_action: Some(ReleaseAction::Patch),
         hash: "000fe77015b7aa2ac666ec05e14b76c9ba3dfd0a".to_string(),
     };
     let commit3_3 = Commit {
-        message: "patch: also a patch".to_string(),
-        commit_type: "patch".to_string(),
+        message: "style: style adjusting".to_string(),
+        release_action: Some(ReleaseAction::Patch),
         hash: "111fe77015b7aa2ac666ec05e14b76c9ba3dfd0a".to_string(),
     };
 
@@ -63,10 +63,10 @@ fn test_can_build_with_commit(commits_constructor: Vec<Commit>) -> TestResult<()
     let mut changelog_plugin = ChangelogPlugin::new();
 
     let mut sections = BTreeMap::new();
-    sections.insert("break".to_string(), vec![commits[0].clone()]);
-    sections.insert("feat".to_string(), vec![commits[1].clone(), commits[2].clone()]);
+    sections.insert(ReleaseAction::Major, vec![commits[0].clone()]);
+    sections.insert(ReleaseAction::Minor, vec![commits[1].clone(), commits[2].clone()]);
     sections.insert(
-        "patch".to_string(),
+        ReleaseAction::Patch,
         vec![commits[3].clone(), commits[4].clone(), commits[5].clone()],
     );
 
@@ -112,15 +112,15 @@ fn test_can_serialize_file_exists(commits_constructor: Vec<Commit>) -> TestResul
     let date = now.format(&date_format)?;
 
     let test_file = format!("## [v4.0.0](https://github.com/user/repo/compare/v3.2.1..v4.0.0) ({date})") + "\n\n" +
-        "* **break**\n" + 
+        "* **Major changes**\n" + 
         " * break: new breaking ([1ebdf43e](https://github.com/user/repo/commit/1ebdf43e8950d8f9dace2e554be5d387267575ef))\n" +
-        "* **feat**\n" +
+        "* **Minor changes**\n" +
         " * feat: new feature ([172cd158](https://github.com/user/repo/commit/172cd1589d0a29b56cd8261a888911201305b04d))\n" +
-        " * feat: another feature ([000cd158](https://github.com/user/repo/commit/000cd1589d0a29b56cd8261a888911201305b04d))\n" +
-        "* **patch**\n" +
+        " * refac: refac the function ([000cd158](https://github.com/user/repo/commit/000cd1589d0a29b56cd8261a888911201305b04d))\n" +
+        "* **Patch changes**\n" +
         " * patch: new patch ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
-        " * patch: another patch ([000fe770](https://github.com/user/repo/commit/000fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
-        " * patch: also a patch ([111fe770](https://github.com/user/repo/commit/111fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n\n\n";
+        " * sec: security fix ([000fe770](https://github.com/user/repo/commit/000fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
+        " * style: style adjusting ([111fe770](https://github.com/user/repo/commit/111fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n\n\n";
 
     // Asserts equality
     assert_eq!(test_file, buffer);
@@ -162,16 +162,16 @@ fn test_can_serialize_file_not_exist(commits_constructor: Vec<Commit>) -> TestRe
     let date = now.format(&date_format)?;
 
     let test_file = format!("## [v4.0.0](https://github.com/user/repo/compare/v3.2.1..v4.0.0) ({date})") + "\n\n" +
-        "* **break**\n" + 
-        " * break: new breaking ([1ebdf43e](https://github.com/user/repo/commit/1ebdf43e8950d8f9dace2e554be5d387267575ef))\n" +
-        "* **feat**\n" +
-        " * feat: new feature ([172cd158](https://github.com/user/repo/commit/172cd1589d0a29b56cd8261a888911201305b04d))\n" +
-        " * feat: another feature ([000cd158](https://github.com/user/repo/commit/000cd1589d0a29b56cd8261a888911201305b04d))\n" +
-        "* **patch**\n" +
-        " * patch: new patch ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
-        " * patch: another patch ([000fe770](https://github.com/user/repo/commit/000fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
-        " * patch: also a patch ([111fe770](https://github.com/user/repo/commit/111fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n\n\n" +
-        "This is a changelog file\n"; // Taxt that was already in the file
+    "* **Major changes**\n" + 
+    " * break: new breaking ([1ebdf43e](https://github.com/user/repo/commit/1ebdf43e8950d8f9dace2e554be5d387267575ef))\n" +
+    "* **Minor changes**\n" +
+    " * feat: new feature ([172cd158](https://github.com/user/repo/commit/172cd1589d0a29b56cd8261a888911201305b04d))\n" +
+    " * refac: refac the function ([000cd158](https://github.com/user/repo/commit/000cd1589d0a29b56cd8261a888911201305b04d))\n" +
+    "* **Patch changes**\n" +
+    " * patch: new patch ([cd2fe770](https://github.com/user/repo/commit/cd2fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
+    " * sec: security fix ([000fe770](https://github.com/user/repo/commit/000fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n" +
+    " * style: style adjusting ([111fe770](https://github.com/user/repo/commit/111fe77015b7aa2ac666ec05e14b76c9ba3dfd0a))\n\n\n" +
+        "This is a changelog file\n"; // Text that was already in the file
 
     // Asserts equality
     assert_eq!(test_file, buffer);

@@ -1,9 +1,10 @@
 //! Unit tests
 //!
 //! This testing module implements the unit tests for versioning.
-use super::{errors::*, *};
 
-// Tests the conversion of a string tag into a [Tag] structure
+use crate::{errors::TestResult, *};
+
+// Casts a string tag into a [Tag] structure
 #[test]
 fn test_can_try_into() -> TestResult<()> {
     // Unit test preparation
@@ -29,7 +30,22 @@ fn test_can_try_into() -> TestResult<()> {
     Ok(())
 }
 
-// Tests a Tag's incrementation from a release action type
+// Parses from Tag to String
+#[test]
+fn test_can_into_string() {
+    // Unit test preparation
+    let tag = Tag {
+        major: 3,
+        minor: 2,
+        patch: 1,
+    };
+
+    let tag_string: String = tag.try_into().unwrap();
+
+    assert_eq!(tag_string, "v3.2.1");
+}
+
+// Increments a Tag's from a release action type
 #[test]
 fn test_can_increment() {
     // Unit test preparation

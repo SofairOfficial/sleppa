@@ -15,6 +15,10 @@ pub enum ChangelogError {
     /// Chained time format error
     #[error(transparent)]
     InvalidFormat(#[from] time::error::Format),
+
+    /// Missing key or value in context
+    #[error("Missing key in context: {0}")]
+    InvalidContext(String),
 }
 
 /// Result type alias returned by function.
